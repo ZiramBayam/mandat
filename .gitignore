@@ -1,0 +1,22 @@
+# Artefak build
+node_modules/
+.pnpm-store/
+frontend/dist/
+frontend/.vite/
+
+# Foundry. contracts/lib/ SENGAJA tidak ada di sini.
+# Ia submodule yang harus di-commit, kalau tidak `forge build`
+# gagal di mesin siapa pun yang clone.
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/.env
+
+# Rahasia. Lihat contracts/.env.example dan .env.example di root.
+.env
+.env.*
+!.env.example
+
+# working/ tidak masuk sini. Dokumen kerja tidak boleh di-commit (R1),
+# tapi juga tidak boleh di-gitignore, karena itu menyembunyikannya
+# dari git status dan berbahaya. Aturannya: jangan pernah `git add`.

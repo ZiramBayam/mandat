@@ -1,0 +1,20 @@
+{
+  "name": "mandat",
+  "private": true,
+  "version": "0.1.0",
+  "description": "User-owned authority for agents and skills on Monad",
+  "license": "MIT",
+  "packageManager": "pnpm@10.0.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter @mandat/protocol build && pnpm -r --filter @mandat/envelope-cli build && pnpm -r --filter @mandat/authority-header build && pnpm -r --filter @mandat/three-light build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "contracts:build": "cd contracts && forge build",
+    "contracts:test": "cd contracts && forge test",
+    "seller": "pnpm --filter @mandat/authority-header start:seller",
+    "dev": "pnpm --filter @mandat/web dev"
+  }
+}
