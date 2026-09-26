@@ -23,8 +23,14 @@ contract Deploy is Script {
         uint256 chainId = block.chainid;
 
         address identity = resolveIdentityRegistry();
-        require(identity.code.length > 0, "no ERC-8004 identity registry available");
-        console.log("erc8004 identity registry:", identity);
+        if (identity == address(0)) {
+            // Expected on testnet. The IDENTITY check reads AuthorityRegistry.agentIdOf
+            // and never the ERC-8004 contract, so no registry is needed there.
+            console.log("erc8004 identity registry: none on this chain (expected on testnet)");
+        } else {
+            require(identity.code.length > 0, "configured ERC-8004 registry has no code");
+            console.log("erc8004 identity registry:", identity);
+        }
 
         vm.startBroadcast(pk);
 
