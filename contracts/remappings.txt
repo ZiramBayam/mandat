@@ -1,0 +1,14 @@
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+@openzeppelin/contracts-upgradeable/=lib/openzeppelin-upgradeable-contracts/contracts/
+@account-abstraction/=lib/account-abstraction/contracts/
+@erc7579/=lib/erc7579-implementation/src/
+@SCL/=lib/SCL/solidity/src/
+@FCL/=lib/FCL/solidity/src/
+@solidity-stringutils/=lib/solidity-stringutils/src/
+@bytes-utils/=lib/solidity-bytes-utils/contracts/
+FreshCryptoLib/=lib/FreshCryptoLib/solidity/src/
+forge-std/=lib/forge-std/src/
+ds-test/=lib/ds-test/src/
+
+delegation-framework/=lib/delegation-framework/src/
+erc-8004/=lib/erc-8004-contracts/contracts/
