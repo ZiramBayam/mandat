@@ -1,0 +1,32 @@
+{
+  "name": "@mandat/envelope-cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Compile a SKILL.md permissions block into a MetaMask Delegation Framework delegation.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "envelope": "./src/cli.ts"
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "envelope": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@mandat/protocol": "workspace:*",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
