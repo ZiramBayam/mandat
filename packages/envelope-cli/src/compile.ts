@@ -1,21 +1,32 @@
 /**
  * The one place a `permissions` block becomes DTK caveats.
  *
- * Kept in its own package and its own function so the mapping in
- * working/architecture.md 5 has exactly one implementation. If the table there
- * and this code disagree, the table is wrong.
+ * The mapping table in working/architecture.md 5 has exactly one implementation,
+ * here. If the table and this code disagree, the table is wrong.
+ *
+ * The terms encodings are NOT abi.encode. Each built-in enforcer reads a bespoke
+ * packed layout, and several reject the wrong length outright. See
+ * @mandat/protocol/caveatTerms, and contracts/test/CompiledEnvelope.t.sol which
+ * asserts every term against the live enforcer's own getTermsInfo().
  */
 
-import { encodeAbiParameters, parseAbiParameters, type Address, type Hex } from "viem";
+import { type Address, type Hex, parseAbiParameters } from "viem";
 import {
   CHECK_GRAPH,
   CHECK_IDENTITY,
   CHECK_MANIFEST,
-  DTK,
   ZERO_HASH,
+  encodeAllowedMethods,
+  encodeAllowedTargets,
+  encodeERC20PeriodTransfer,
+  encodeLimitedCalls,
   encodeTerms,
+  encodeTimestamp,
+  periodToSeconds,
+  type Period,
+  type Terms,
 } from "@mandat/protocol";
-import { periodToSeconds, type Period, type Permissions } from "./manifest.js";
+import type { Permissions } from "./manifest.js";
 
 export type CompiledCaveat = { enforcer: Address; terms: Hex; args: Hex };
 
@@ -24,133 +35,173 @@ export type CompileInput = {
   manifestHash: Hex;
   /** Zero for a root delegation. */
   parentDelegationHash?: Hex;
-  delegate: Address;
-  delegator: Address;
-  salt: bigint;
   checks?: number;
+  /** Injected so a compiled envelope is reproducible and testable. */
+  now?: number;
+  /** Caveat enforcer addresses. Deploy with script/DeployCaveatEnforcers.s.sol. */
+  enforcers: EnforcerAddresses;
+};
+
+export type EnforcerAddresses = {
+  allowedTargets: Address;
+  allowedMethods: Address;
+  erc20PeriodTransfer: Address;
+  timestamp: Address;
+  limitedCalls: Address;
+  /** Our own, not a DTK builtin. */
+  skillAuthority: Address;
 };
 
 export type Compiled = {
   caveats: CompiledCaveat[];
   terms: Hex;
-  /** Everything a human should read before signing. */
+  decodedTerms: Terms;
   summary: {
     targets: Address[];
     selectors: Hex[];
-    tokenCaps: { token: Address; perPeriod: string; periodSeconds: number }[];
-    expiry: number;
+    tokenCaps: { token: Address; perPeriodBaseUnits: string; periodSeconds: number; startDate: number }[];
+    notBefore: number;
+    notAfter: number;
     maxCalls: number | null;
     checks: string[];
+    manifestHash: Hex;
   };
 };
 
-const PERIOD_TRANSFER_ABI = [
-  { type: "uint256", name: "period" },
-  { type: "uint256", name: "amount" },
-] as const;
-
-const TIMESTAMP_ABI = [{ type: "uint256", name: "timestamp" }] as const;
-const LIMITED_CALLS_ABI = [{ type: "uint256", name: "limit" }] as const;
-const ALLOWED_TARGETS_ABI = [{ type: "address[]", name: "targets" }] as const;
-const ALLOWED_METHODS_ABI = [{ type: "bytes4[]", name: "selectors" }] as const;
-
 export function compileEnvelope(input: CompileInput): Compiled {
-  const { permissions, manifestHash } = input;
+  const { permissions, manifestHash, enforcers } = input;
+  const now = input.now ?? Math.floor(Date.now() / 1000);
   const caveats: CompiledCaveat[] = [];
 
   const targets = permissions.contracts.map((c) => c.address);
   const selectors = permissions.contracts.flatMap((c) => c.methods);
 
   caveats.push({
-    enforcer: DTK.allowedTargets,
-    terms: encodeAbiParameters(ALLOWED_TARGETS_ABI, [targets]),
+    enforcer: enforcers.allowedTargets,
+    terms: encodeAllowedTargets(targets),
     args: "0x",
   });
 
   caveats.push({
-    enforcer: DTK.allowedMethods,
-    terms: encodeAbiParameters(ALLOWED_METHODS_ABI, [selectors]),
+    enforcer: enforcers.allowedMethods,
+    terms: encodeAllowedMethods(selectors),
     args: "0x",
   });
 
-  for (const token of permissions.tokens) {
+  // The token lives in the ERC20PeriodTransfer terms, not in args, and the
+  // enforcer additionally requires the call target to equal that token.
+  const tokenCaps = permissions.tokens.map((token) => {
+    const periodSeconds = periodToSeconds(token.period as Period);
+    const startDate = now;
     caveats.push({
-      enforcer: DTK.erc20PeriodTransfer,
-      terms: encodeAbiParameters(PERIOD_TRANSFER_ABI, [
-        BigInt(periodToSeconds(token.period as Period)),
-        BigInt(token.perPeriod),
-      ]),
-      args: encodeAbiParameters([{ type: "address", name: "token" }], [token.address]),
+      enforcer: enforcers.erc20PeriodTransfer,
+      terms: encodeERC20PeriodTransfer({
+        token: token.address,
+        periodAmount: BigInt(token.perPeriod),
+        periodDuration: BigInt(periodSeconds),
+        startDate: BigInt(startDate),
+      }),
+      args: "0x",
     });
-  }
+    return { token: token.address, perPeriodBaseUnits: token.perPeriod, periodSeconds, startDate };
+  });
 
   const expirySeconds = periodToSeconds(permissions.expiry);
+  const notAfter = now + expirySeconds;
   caveats.push({
-    enforcer: requireEnforcer("Timestamp", TIMESTAMP_ENFORCER),
-    terms: encodeAbiParameters(TIMESTAMP_ABI, [BigInt(Math.floor(Date.now() / 1000) + expirySeconds)]),
+    enforcer: enforcers.timestamp,
+    terms: encodeTimestamp({ beforeThreshold: BigInt(notAfter) }),
     args: "0x",
   });
 
+  let maxCalls: number | null = null;
   if (permissions.maxCalls !== undefined) {
+    // maxCalls parses as a string so no integer in the manifest is ever rounded;
+    // here it is a small count, so a number is the right type for the summary.
+    maxCalls = Number(permissions.maxCalls);
     caveats.push({
-      enforcer: requireEnforcer("LimitedCalls", LIMITED_CALLS_ENFORCER),
-      terms: encodeAbiParameters(LIMITED_CALLS_ABI, [BigInt(permissions.maxCalls)]),
+      enforcer: enforcers.limitedCalls,
+      terms: encodeLimitedCalls(BigInt(permissions.maxCalls)),
       args: "0x",
     });
   }
 
-  const parentHash = input.parentDelegationHash ?? ZERO_HASH;
+  caveats.push({
+    enforcer: enforcers.skillAuthority,
+    terms: ZERO_HASH, // replaced below
+    args: "0x",
+  });
+
   const checks = input.checks ?? (CHECK_MANIFEST | CHECK_GRAPH | CHECK_IDENTITY);
-  const terms =
+  const parentHash = input.parentDelegationHash ?? ZERO_HASH;
+  const encoded =
     checks & CHECK_MANIFEST
       ? encodeTerms({ checks, manifestHash, parentDelegationHash: parentHash })
       : encodeTerms({ checks, parentDelegationHash: parentHash });
 
+  const caveatIndex = caveats.length - 1;
+  caveats[caveatIndex] = { enforcer: enforcers.skillAuthority, terms: encoded, args: "0x" };
+
   return {
     caveats,
-    terms,
+    terms: encoded,
+    decodedTerms: {
+      version: 1,
+      checks,
+      manifestHash: checks & CHECK_MANIFEST ? manifestHash : ZERO_HASH,
+      parentDelegationHash: parentHash,
+    },
     summary: {
       targets,
       selectors,
-      tokenCaps: permissions.tokens.map((t) => ({
-        token: t.address,
-        perPeriod: t.period,
-        periodSeconds: periodToSeconds(t.period as Period),
-      })),
-      expiry: Math.floor(Date.now() / 1000) + expirySeconds,
-      maxCalls: permissions.maxCalls ?? null,
-      checks: describeChecksLocal(checks),
+      tokenCaps,
+      notBefore: 0,
+      notAfter,
+      maxCalls,
+      checks: describeChecks(checks),
+      manifestHash: checks & CHECK_MANIFEST ? manifestHash : ZERO_HASH,
     },
   };
 }
 
-/**
- * Not yet resolved on Monad. See working/constraints.md OPEN-01: only three of
- * the five caveat enforcer addresses are verified.
- *
- * These are placeholders that MUST be resolved before any envelope is signed.
- * A zero address here would produce a caveat whose call silently fails, so we
- * refuse to compile instead. Fail-closed beats a demo that breaks on chain.
- */
-const TIMESTAMP_ENFORCER: Address | null = null;
-const LIMITED_CALLS_ENFORCER: Address | null = null;
-
-function requireEnforcer(name: string, value: Address | null): Address {
-  if (value === null) {
-    throw new Error(
-      `${name} enforcer address is unresolved on Monad. Set it after verifying on-chain ` +
-        `(working/constraints.md OPEN-01). Refusing to compile an envelope that would fail on redemption.`,
-    );
-  }
-  return value;
-}
-
-function describeChecksLocal(checks: number): string[] {
+function describeChecks(checks: number): string[] {
   const names: string[] = [];
   if (checks & CHECK_MANIFEST) names.push("MANIFEST");
   if (checks & CHECK_GRAPH) names.push("GRAPH");
   if (checks & CHECK_IDENTITY) names.push("IDENTITY");
   return names;
+}
+
+/**
+ * Written to fixtures/<skill>/compiled.json and read by
+ * contracts/test/CompiledEnvelope.t.sol, which decodes every term with the LIVE
+ * enforcer's own getTermsInfo. abi-encoded so Solidity can decode the array
+ * directly instead of hand-rolling a JSON parser.
+ */
+export function serialiseForChainTest(compiled: Compiled): string {
+  // Named keys rather than an array: forge-std's readBytes cannot decode a JSON
+  // array, and a named field reads better in the Solidity test anyway.
+  const byEnforcer: Record<string, string> = {};
+  for (const c of compiled.caveats) byEnforcer[c.enforcer.toLowerCase()] = c.terms;
+
+  return JSON.stringify(
+    {
+      caveats: compiled.caveats.map((c) => ({ enforcer: c.enforcer, terms: c.terms, args: c.args })),
+      enforcers: {
+        allowedTargets: byEnforcer[compiled.caveats[0]?.enforcer.toLowerCase() ?? ""] ?? "0x",
+        allowedMethods: byEnforcer[compiled.caveats[1]?.enforcer.toLowerCase() ?? ""] ?? "0x",
+        erc20PeriodTransfer: byEnforcer[compiled.caveats[2]?.enforcer.toLowerCase() ?? ""] ?? "0x",
+        timestamp: byEnforcer[compiled.caveats[3]?.enforcer.toLowerCase() ?? ""] ?? "0x",
+        limitedCalls: byEnforcer[compiled.caveats[4]?.enforcer.toLowerCase() ?? ""] ?? "0x",
+        skillAuthority: byEnforcer[compiled.caveats[5]?.enforcer.toLowerCase() ?? ""] ?? "0x",
+      },
+      caveatCount: compiled.caveats.length,
+      terms: compiled.terms,
+      summary: compiled.summary,
+    },
+    null,
+    2,
+  );
 }
 
 export { periodToSeconds, parseAbiParameters };
