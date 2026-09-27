@@ -43,3 +43,35 @@ is recorded. Same script, no changes needed: on mainnet
 cd contracts
 forge script script/Deploy.s.sol:Deploy --rpc-url https://testnet-rpc.monad.xyz --broadcast
 ```
+
+## Caveat enforcers
+
+Deployed 26 Sep 2026, chain 10143. The first three are MetaMask's own and live at
+the same addresses on both chains; the last two are ours, because DTK's CREATE2
+salt is not published and their addresses cannot be derived.
+
+| Enforcer | Address | Source |
+|---|---|---|
+| `AllowedTargets` | `0xA3f6693F12eF86479472C1445893335359A793D9` | ours, parity with `0x7F20f61b…` asserted |
+| `AllowedMethods` | `0x7cF10cEAddEe52019F123822C432481E1FD311b5` | ours, parity with `0x2c21fD0C…` asserted |
+| `ERC20PeriodTransfer` | `0x40CA8Ed973609be0A28d62805289B2451265005f` | ours, parity with `0x474e3Ae7…` asserted |
+| `Timestamp` | `0xEcee8037a4BaABD46f8D35c000bF7AF385CdE345` | ours, no live counterpart |
+| `LimitedCalls` | `0xc713A1439D395C25eC41fAAcBF68bcA1ecd47041` | ours, no live counterpart |
+
+Parity is asserted in `test/CaveatEnforcerParity.t.sol` by decoding identical
+terms through the live enforcer and through ours, not by comparing bytecode.
+
+## Compiled envelope
+
+`fixtures/wmon-spend/compiled.json` is generated from `SKILL.md` and regenerated
+with:
+
+```bash
+cd packages/envelope-cli
+set -a && . ../../contracts/.env && set +a
+pnpm envelope compile ../../contracts/fixtures/wmon-spend/SKILL.md \
+                      ../../contracts/fixtures/wmon-spend/compiled.json
+```
+
+`ENVELOPE_NOW` in `contracts/.env` pins the timestamp, so the output is
+reproducible and the recorded demo matches the committed file.
