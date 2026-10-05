@@ -26,7 +26,7 @@ import {
   type Period,
   type Terms,
 } from "@mandat/protocol";
-import type { Permissions } from "./manifest.js";
+import { validatePermissions, type Permissions } from "./manifest.js";
 
 export type CompiledCaveat = { enforcer: Address; terms: Hex; args: Hex };
 
@@ -72,6 +72,13 @@ export function compileEnvelope(input: CompileInput): Compiled {
   const { permissions, manifestHash, enforcers } = input;
   const now = input.now ?? Math.floor(Date.now() / 1000);
   const caveats: CompiledCaveat[] = [];
+
+  // Validated here as well as in parsePermissions. `compileEnvelope` is a public
+  // export, so a caller can hand it a hand-built object and skip the parser
+  // entirely. An envelope compiled from an unvalidated block could bind the
+  // wrong chain, and that error surfaces on-chain at redemption rather than at
+  // compile time.
+  validatePermissions(permissions);
 
   const targets = permissions.contracts.map((c) => c.address);
   const selectors = permissions.contracts.flatMap((c) => c.methods);
@@ -178,22 +185,27 @@ function describeChecks(checks: number): string[] {
  * enforcer's own getTermsInfo. abi-encoded so Solidity can decode the array
  * directly instead of hand-rolling a JSON parser.
  */
-export function serialiseForChainTest(compiled: Compiled): string {
-  // Named keys rather than an array: forge-std's readBytes cannot decode a JSON
-  // array, and a named field reads better in the Solidity test anyway.
+export function serialiseForChainTest(compiled: Compiled, enforcers: EnforcerAddresses): string {
+  // Looked up by enforcer address, never by array position. `compileEnvelope`
+  // pushes caveats conditionally: a manifest with no `maxCalls` produces five
+  // caveats, not six. Positional indexing then read `limitedCalls` off the
+  // skillAuthority slot, and the Solidity test would have decoded the wrong
+  // terms under the wrong name without failing.
   const byEnforcer: Record<string, string> = {};
   for (const c of compiled.caveats) byEnforcer[c.enforcer.toLowerCase()] = c.terms;
+
+  const lookup = (address: Address): string => byEnforcer[address.toLowerCase()] ?? "0x";
 
   return JSON.stringify(
     {
       caveats: compiled.caveats.map((c) => ({ enforcer: c.enforcer, terms: c.terms, args: c.args })),
       enforcers: {
-        allowedTargets: byEnforcer[compiled.caveats[0]?.enforcer.toLowerCase() ?? ""] ?? "0x",
-        allowedMethods: byEnforcer[compiled.caveats[1]?.enforcer.toLowerCase() ?? ""] ?? "0x",
-        erc20PeriodTransfer: byEnforcer[compiled.caveats[2]?.enforcer.toLowerCase() ?? ""] ?? "0x",
-        timestamp: byEnforcer[compiled.caveats[3]?.enforcer.toLowerCase() ?? ""] ?? "0x",
-        limitedCalls: byEnforcer[compiled.caveats[4]?.enforcer.toLowerCase() ?? ""] ?? "0x",
-        skillAuthority: byEnforcer[compiled.caveats[5]?.enforcer.toLowerCase() ?? ""] ?? "0x",
+        allowedTargets: lookup(enforcers.allowedTargets),
+        allowedMethods: lookup(enforcers.allowedMethods),
+        erc20PeriodTransfer: lookup(enforcers.erc20PeriodTransfer),
+        timestamp: lookup(enforcers.timestamp),
+        limitedCalls: lookup(enforcers.limitedCalls),
+        skillAuthority: lookup(enforcers.skillAuthority),
       },
       caveatCount: compiled.caveats.length,
       terms: compiled.terms,

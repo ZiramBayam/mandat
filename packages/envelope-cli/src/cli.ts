@@ -66,18 +66,17 @@ function main(argv: string[]): number {
 
   // The manifest digest commits to these exact bytes, so the on-chain envelope can
   // be tied back to a document a human read and approved.
-  // Commits to these exact bytes, so the on-chain envelope can be tied back to a
-  // document a human read. Content-addressed: the CID is derived from the same bytes.
   const manifestHash = keccak256(toHex(markdown)) as Hex;
   const now = process.env["ENVELOPE_NOW"];
+  const enforcers = enforcersFromEnv();
   const compiled = compileEnvelope({
     permissions,
     manifestHash,
-    enforcers: enforcersFromEnv(),
+    enforcers,
     ...(now === undefined ? {} : { now: Number(now) }),
   });
 
-  const json = serialiseForChainTest(compiled);
+  const json = serialiseForChainTest(compiled, enforcers);
   if (outPath !== undefined) {
     writeFileSync(outPath, json);
     process.stderr.write(`manifestHash ${manifestHash}\nwrote ${outPath}\n`);

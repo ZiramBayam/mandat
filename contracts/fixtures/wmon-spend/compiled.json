@@ -58,7 +58,7 @@
     ],
     "notBefore": 0,
     "notAfter": 1790361600,
-    "maxCalls": "20",
+    "maxCalls": 20,
     "checks": [
       "MANIFEST",
       "GRAPH",
