@@ -108,8 +108,8 @@ function cfg(overrides: Partial<SellerConfig> = {}): SellerConfig {
     // Priced in the same token the cap is denominated in, because a cap in one
     // token cannot price a tier in another.
     tiers: [
-      { name: "cheap-dataset", price: 5_000_000n, token: WMON_TEST },
-      { name: "premium-dataset", price: 80_000_000n, token: WMON_TEST },
+      { name: "cheap-dataset", price: 5_000_000n, token: WMON_TEST, releaseAt: "Voted" },
+      { name: "premium-dataset", price: 80_000_000n, token: WMON_TEST, releaseAt: "Finalized" },
     ],
     // Frozen so expiry tests do not depend on the wall clock.
     now: () => 1_791_100_000,
@@ -409,8 +409,8 @@ describe("verifyAuthority against live Monad", () => {
       cfg({
         requestedTier: "premium-dataset",
         tiers: [
-          { name: "cheap-dataset", price: 5_000_000n, token: WMON_TEST },
-          { name: "premium-dataset", price: 80_000_000n, token: WMON_TEST },
+          { name: "cheap-dataset", price: 5_000_000n, token: WMON_TEST, releaseAt: "Voted" },
+          { name: "premium-dataset", price: 80_000_000n, token: WMON_TEST, releaseAt: "Finalized" },
         ],
       }),
     );
@@ -432,8 +432,8 @@ describe("verifyAuthority against live Monad", () => {
         requestedTier: "premium-dataset",
         // Both fit inside the cap here, so only the substitution rule can refuse.
         tiers: [
-          { name: "cheap-dataset", price: 1_000_000n, token: WMON_TEST },
-          { name: "premium-dataset", price: 2_000_000n, token: WMON_TEST },
+          { name: "cheap-dataset", price: 1_000_000n, token: WMON_TEST, releaseAt: "Voted" },
+          { name: "premium-dataset", price: 2_000_000n, token: WMON_TEST, releaseAt: "Finalized" },
         ],
       }),
     );
@@ -451,7 +451,7 @@ describe("verifyAuthority against live Monad", () => {
 
   it("never serves a tier priced in a token the cap is not denominated in", async () => {
     const decision = await tryVerify(header(), cfg({
-      tiers: [{ name: "usdc-only", price: 1n, token: "0x1111111111111111111111111111111111111111" }],
+      tiers: [{ name: "usdc-only", price: 1n, token: "0x1111111111111111111111111111111111111111", releaseAt: "Voted" }],
     }));
     if (decision === null) return;
     expect(decision.tier).toBeNull();

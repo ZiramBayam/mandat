@@ -19,8 +19,8 @@
 import { createServer } from "node:http";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { createPublicClient, http, type Address, type Hex } from "viem";
-import { CommitIndex, MONAD_TESTNET, X402, mayRelease, policyFor } from "@mandat/protocol";
-import { signDecision, verifyAuthority, type SellerDecision, type SellerConfig } from "../protocol/verify.js";
+import { CommitIndex, MONAD_TESTNET, X402, mayRelease } from "@mandat/protocol";
+import { signDecision, verifyAuthority, type SellerConfig, type SellerDecision, type Tier } from "../protocol/verify.js";
 import { verifyPayment } from "../protocol/payment.js";
 import { CommitFeed } from "@mandat/three-light";
 import { DEMO_TIERS } from "./tiers.js";
@@ -98,11 +98,33 @@ function configFor(tierName: string): SellerConfig {
   };
 }
 
-type Resource = { name: string; body: string; priceUsdc: number };
+/**
+ * Prices are in base units of `CAP_TOKEN`, the same token the authority cap is
+ * denominated in, and the same token `verifyPayment` looks for a transfer of.
+ *
+ * They were human-readable USDC before. That is the bug this comment is about: the
+ * 402 challenge advertised `maxAmountRequired: 8000000` and the payment check
+ * looked for a USDC transfer, while the tier that gates release is priced in WMON
+ * base units. Three different numbers for one resource, and the cheapest of them
+ * was the one on the wire. A client that paid the advertised amount in the
+ * advertised token was not paying what the authority envelope authorised, and the
+ * seller could not have detected it.
+ *
+ * There is no USDC on Monad testnet, so a USDC price was never collectable here in
+ * the first place.
+ */
+type Resource = { name: string; body: string };
+
 const RESOURCES: Record<string, Resource> = {
-  "cheap-dataset": { name: "cheap-dataset", body: "a small, cheap answer", priceUsdc: 0.005 },
-  "expensive-dataset": { name: "expensive-dataset", body: "a large, expensive answer", priceUsdc: 80 },
+  "cheap-dataset": { name: "cheap-dataset", body: "a small, cheap answer" },
+  "expensive-dataset": { name: "expensive-dataset", body: "a large, expensive answer" },
 };
+
+function tierFor(name: string): Tier {
+  const tier = DEMO_TIERS.find((t) => t.name === name);
+  if (tier === undefined) throw new Error(`no tier named ${name} in DEMO_TIERS`);
+  return tier;
+}
 
 /**
  * Append a signed record of what was decided.
@@ -181,13 +203,18 @@ const server = createServer(async (req, res) => {
   //       here so the challenge is produced before anything is verified.
   const raw = req.headers["x-authority-header"];
   if (typeof raw !== "string" || raw.length === 0) {
+    const tier = tierFor(resource.name);
     res.writeHead(402, {
       "content-type": "application/json",
       "x-payment-required": JSON.stringify({
         chain: MONAD_TESTNET.chainId,
         facilitator: X402.facilitator,
         resource: resource.name,
-        maxAmountRequired: String(Math.round(resource.priceUsdc * USDC_BASE_UNITS)),
+        asset: tier.token,
+        // The amount the authority envelope actually caps, in that token's base
+        // units. Advertising anything else invites a client to pay a number that
+        // has nothing to do with the authority it is asking to exercise.
+        maxAmountRequired: tier.price.toString(),
         resourceName: resource.name,
         description: "Answer produced only after authority is verified and finality is reached.",
         mimeType: "application/json",
@@ -238,13 +265,19 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  const tier = tierFor(resource.name);
   let paid: { payer: Address; amount: bigint };
   try {
     paid = await verifyPayment(client, {
       paymentHeader: req.headers["x-payment"],
       settlementTx: paymentTx as Hex,
       payTo: SELLER,
-      maxAmount: BigInt(Math.round(resource.priceUsdc * USDC_BASE_UNITS)),
+      maxAmount: tier.price,
+      token: tier.token,
+      decimals: 18,
+      // Half the ask. Below that the transfer is rounding, not payment, and the
+      // authority envelope authorises the full price.
+      minAmount: tier.price / 2n,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -255,7 +288,7 @@ const server = createServer(async (req, res) => {
 
   // -- 4. Finality. Unknown means withhold. A dropped socket must never look
   //       like "finalized", or a resource is released on a guess.
-  const required = policyFor(resource.priceUsdc).releaseAt;
+  const required = tier.releaseAt;
   const state = await feed.statusOf(
     (hash) => client.getTransactionReceipt({ hash: hash as Hex }),
     paymentTx,
@@ -295,7 +328,6 @@ const server = createServer(async (req, res) => {
   });
 });
 
-const USDC_BASE_UNITS = 1_000_000;
 const HEADER_EXTENSION_KEY = "authorityHeader";
 
 server.listen(PORT, () => {

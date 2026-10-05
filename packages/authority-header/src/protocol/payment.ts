@@ -32,8 +32,25 @@ export type PaymentCheck = {
   payTo: Address;
   /** Largest acceptable amount, in the token's base units. */
   maxAmount: bigint;
-  /** Expected token. Defaults to testnet USDC, 6 decimals. */
-  token?: Address;
+  /**
+   * Expected token, and how many base units make one of it.
+   *
+   * Required rather than defaulted. This used to default to testnet USDC at six
+   * decimals while the authority cap and the seller tiers are denominated in WMON at
+   * eighteen, so a `maxAmount` of 5000 was compared against a 5e17 balance and the
+   * seller either rejected every real payment or, worse, accepted a dust transfer
+   * as payment for an 80-unit resource. The token is part of the amount.
+   */
+  token: Address;
+  decimals: number;
+  /**
+   * Smallest amount that counts as a payment, in base units.
+   *
+   * An earlier version inferred this as "half of one USDC" and applied it to
+   * whatever token arrived, which is a 6-decimal assumption applied to an
+   * 18-decimal number. A dust transfer would pass it. Stated by the caller instead.
+   */
+  minAmount: bigint;
 };
 
 export class PaymentError extends Error {
@@ -42,15 +59,6 @@ export class PaymentError extends Error {
     this.name = "PaymentError";
   }
 }
-
-const USDC_TESTNET = "0x534b2f3A21130d7a60830c2Df862319e593943A3" as Address;
-const USDC_DECIMALS = 6;
-
-/**
- * x402 amounts are human-readable decimals in the header and base units on
- * chain. Only the base-unit form is compared here.
- */
-const BASE_UNITS = 10n ** BigInt(USDC_DECIMALS);
 
 function findTokenTransfers(
   logs: readonly { address: Address; topics: readonly string[]; data: Hex }[],
@@ -74,7 +82,7 @@ export async function verifyPayment(
   client: PublicClient,
   check: PaymentCheck,
 ): Promise<{ payer: Address; amount: bigint }> {
-  const token = check.token ?? USDC_TESTNET;
+  const token = check.token;
 
   let receipt;
   try {
@@ -115,14 +123,15 @@ export async function verifyPayment(
       `the settlement sent no ${token} to this seller; a payment to somebody else is not a payment`,
     );
   }
-  if (received < BASE_UNITS / 2n) {
+  if (received < check.minAmount) {
     throw new PaymentError(
-      `expected an amount in base units but read ${received}; refusing to guess the scale`,
+      `paid ${received} base units of ${token}, below the ${check.minAmount} this resource requires; ` +
+        "a dust transfer is not a payment",
     );
   }
   if (received > check.maxAmount) {
     throw new PaymentError(
-      `paid ${received} base units, more than the ${check.maxAmount} this resource asks for`,
+      `paid ${received} base units of ${token}, more than the ${check.maxAmount} this resource asks for`,
     );
   }
 

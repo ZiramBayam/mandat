@@ -27,7 +27,15 @@ const CHEAP = 100_000_000_000_000_000n; // 0.1
 /** Above the 0.5 cap, so this is the tier the seller must refuse. */
 const EXPENSIVE = 800_000_000_000_000_000n; // 0.8
 
+/**
+ * Release requirements are stated here rather than looked up from the price.
+ *
+ * The cheap tier releases at `Voted` and the expensive one at `Finalized`: a bigger
+ * spend is worth more confirmation, which is the actual reason a finality ladder
+ * exists. Deriving it from a price table keyed in USDC meant a WMON price was read
+ * against USDC bands, so the expensive tier released early for no stated reason.
+ */
 export const DEMO_TIERS: readonly Tier[] = [
-  { name: "cheap-dataset", price: CHEAP, token: CAP_TOKEN },
-  { name: "expensive-dataset", price: EXPENSIVE, token: CAP_TOKEN },
+  { name: "cheap-dataset", price: CHEAP, token: CAP_TOKEN, releaseAt: "Voted" },
+  { name: "expensive-dataset", price: EXPENSIVE, token: CAP_TOKEN, releaseAt: "Finalized" },
 ];

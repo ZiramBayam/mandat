@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { TOKENS } from "../src/addresses.js";
 import { CommitIndex, DEFAULT_RELEASE_POLICY, mayRelease, parseHead, policyFor } from "../src/commitState.js";
 
 /** Shape captured from a live `monadNewHeads` subscription, 26 Sep 2026. */
@@ -62,9 +63,17 @@ describe("CommitIndex", () => {
 
 describe("release policy", () => {
   it("releases cheap resources at Proposed and expensive at Finalized", () => {
-    expect(policyFor(0.005).releaseAt).toBe("Proposed");
-    expect(policyFor(0.5).releaseAt).toBe("Voted");
-    expect(policyFor(80).releaseAt).toBe("Finalized");
+    expect(policyFor(5_000n, TOKENS.usdc.testnet).releaseAt).toBe("Proposed");
+    expect(policyFor(500_000n, TOKENS.usdc.testnet).releaseAt).toBe("Voted");
+    expect(policyFor(80_000_000n, TOKENS.usdc.testnet).releaseAt).toBe("Finalized");
+  });
+
+  it("refuses to read an 18-decimal amount against a 6-decimal ladder", () => {
+    // The bug this type change prevents: 0.8 WMON is 8e17 base units, which is
+    // larger than every band in a USDC ladder except the top one, so the seller
+    // released an expensive resource at Finalized having meant to release a cheap
+    // one at Voted. There is no correct answer here, only a refusal.
+    expect(() => policyFor(800_000_000_000_000_000n, TOKENS.wrappedMon.testnet)).toThrow(/no release policy entry/);
   });
 
   it("never releases when the state is unknown", () => {

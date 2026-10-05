@@ -11,7 +11,8 @@
  *  3. There are FOUR states, not three: Proposed, Voted, Finalized, Verified.
  */
 
-import { COMMIT_STATES, COMMIT_STATE_RANK, type CommitState } from "./addresses.js";
+import { COMMIT_STATES, COMMIT_STATE_RANK, TOKENS, type CommitState } from "./addresses.js";
+import type { Address } from "viem";
 
 export type MonadHead = {
   blockId: string;
@@ -111,21 +112,54 @@ export class CommitIndex {
   }
 }
 
-export type ReleasePolicy = { maxUsdc: number; releaseAt: CommitState };
+/**
+ * A finality ladder, keyed by price.
+ *
+ * The key was `maxUsdc`, a float, and that was the problem: the seller prices in
+ * base units of whichever token the authority cap is denominated in, and on Monad
+ * testnet that is WMON at eighteen decimals. Handing `policyFor` a base-unit
+ * amount as if it were USDC put 0.8 WMON into the 0.01-USDC band and released a
+ * resource at `Proposed`, and handed 8e7 USDC base units into the 1-USDC band and
+ * released at `Voted`. Neither answer was the one the bands describe.
+ *
+ * `maxAmount` is a bigint in the base units of `token` now, so a comparison cannot
+ * silently cross decimals. `mayRelease` is the function that matters; this is only
+ * how a policy is chosen.
+ */
+export type ReleasePolicy = { maxAmount: bigint; token: Address | null; releaseAt: CommitState };
 
-/** Conservative default. Prices are USDC with 6 decimals. */
+/**
+ * Conservative default, in USDC base units.
+ *
+ * Kept for callers that genuinely settle in USDC. It is not the policy this
+ * project's seller uses: the seller's tiers carry `releaseAt` directly, because a
+ * ladder keyed in one token is not a statement about a price in another.
+ */
 export const DEFAULT_RELEASE_POLICY: readonly ReleasePolicy[] = [
-  { maxUsdc: 0.01, releaseAt: "Proposed" },
-  { maxUsdc: 1, releaseAt: "Voted" },
-  { maxUsdc: Number.POSITIVE_INFINITY, releaseAt: "Finalized" },
+  { maxAmount: 10_000n, token: TOKENS.usdc.testnet as Address, releaseAt: "Proposed" },
+  { maxAmount: 1_000_000n, token: TOKENS.usdc.testnet as Address, releaseAt: "Voted" },
+  { maxAmount: 2n ** 63n - 1n, token: TOKENS.usdc.testnet as Address, releaseAt: "Finalized" },
 ];
 
-export function policyFor(priceUsdc: number, policy: readonly ReleasePolicy[] = DEFAULT_RELEASE_POLICY): ReleasePolicy {
-  for (const tier of policy) {
-    if (priceUsdc <= tier.maxUsdc) return tier;
+/**
+ * The ladder entry for an amount, refusing to compare across tokens.
+ *
+ * `token: null` on an entry means "any token", which is only safe for a catch-all
+ * at the top of the ladder. An entry that names a token will not be matched by an
+ * amount in a different one, because a 6-decimal and an 18-decimal base unit are
+ * not the same size and picking the first match would be a coin flip.
+ */
+export function policyFor(
+  amount: bigint,
+  token: Address,
+  policy: readonly ReleasePolicy[] = DEFAULT_RELEASE_POLICY,
+): ReleasePolicy {
+  const matches = policy.filter((tier) => tier.token === null || tier.token.toLowerCase() === token.toLowerCase());
+  for (const tier of matches) {
+    if (amount <= tier.maxAmount) return tier;
   }
-  const last = policy[policy.length - 1];
-  if (last === undefined) throw new Error("release policy is empty");
+  const last = matches[matches.length - 1];
+  if (last === undefined) throw new Error(`no release policy entry for ${token}`);
   return last;
 }
 

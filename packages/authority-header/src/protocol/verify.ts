@@ -28,6 +28,7 @@ import {
   inspectChain,
   type AuthorityClaims,
   type AuthorityHeader,
+  type CommitState,
 } from "@mandat/protocol";
 import { privateKeyToAccount } from "viem/accounts";
 import { authorityRegistryAbi, delegationManagerAbi } from "../abi.js";
@@ -41,6 +42,17 @@ export type Tier = {
   price: bigint;
   /** Token `price` is denominated in. Must match the cap's token to be comparable. */
   token: Address;
+  /**
+   * Commit state at which this tier's resource may be handed over.
+   *
+   * On the tier rather than derived from a price. It used to come from
+   * `policyFor(priceUsdc)`, which looks up a table keyed in USDC: feeding it
+   * 0.8 WMON read as 0.8 USDC and released a resource on the strength of a
+   * different token's price band. Finality required is a choice this seller makes,
+   * and expressing it as a lookup against another token's numbers made the choice
+   * invisible.
+   */
+  releaseAt: CommitState;
 };
 
 export type CheckResult = { name: string; ok: boolean; detail: string };
