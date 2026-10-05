@@ -77,11 +77,24 @@ async function delegate7702(): Promise<void> {
   });
   process.stdout.write(`7702 -> ${DTK_DELEGATOR}\naccount ${account.address}\ntx ${hash}\n`);
   process.stdout.write(
-    "This account can no longer send transactions of its own. Check the code at its\n" +
-      "address reads 0xef0100 followed by the deleGator.\n",
+    "Run `verify` next. On Monad testnet this reports NOT DELEGATED, because the chain\n" +
+      "accepts the transaction but never applies the delegation state. working/constraints.md 11\n",
   );
 }
 
+/**
+ * Reads the delegation designator, i.e. what `eth_getCode` shows for an
+ * EIP-7702 delegated account: `0xef0100` followed by the delegate address.
+ *
+ * On Monad testnet this does not match, and that is a chain property rather
+ * than a script bug: the authorization transaction is accepted and included
+ * with `type: 0x04` and status success, and its gas is charged, but no
+ * delegation state is stored. `eth_getCode` stays `0x` in every block, and the
+ * account still answers `VERSION()` with empty data and can still send plain
+ * transfers, neither of which is possible with the code installed.
+ *
+ * Evidence and tx hashes: working/constraints.md 11.
+ */
 async function codeAt(address: Address): Promise<void> {
   const res = await fetch(MONAD_TESTNET.rpc, {
     method: "POST",
@@ -91,7 +104,36 @@ async function codeAt(address: Address): Promise<void> {
   const json = (await res.json()) as { result?: string };
   const code = json.result ?? "0x";
   const expected = `0xef0100${DTK_DELEGATOR.slice(2).toLowerCase()}`;
-  process.stdout.write(`code at ${address}\n  ${code}\nexpected ${expected}\n  match: ${code.toLowerCase() === expected}\n`);
+  const match = code.toLowerCase() === expected;
+
+  process.stdout.write(`code at ${address}\n  ${code}\nexpected ${expected}\n  match: ${match}\n`);
+
+  // `eth_getCode` is not the whole story: a chain could apply the delegation
+  // and serve the designator somewhere else. Probe a function that only the
+  // deleGator implements, so a false negative here is not possible.
+  const probe = await fetch(MONAD_TESTNET.rpc, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "eth_call",
+      params: [{ to: address, data: "0xffa1ad74" }, "latest"], // VERSION()
+    }),
+  });
+  const probeJson = (await probe.json()) as { result?: string };
+  const probeResult = probeJson.result ?? "0x";
+
+  if (!match || probeResult === "0x") {
+    process.stdout.write(
+      "\nNOT DELEGATED. This account cannot act as a delegator: redeemDelegations calls\n" +
+        "executeFromExecutor on the root delegator, and there is no code there to call.\n" +
+        "Monad testnet accepts 7702 transactions without applying the delegation.\n" +
+        "For G6, deploy a deleGator as an ordinary contract and use that as the root\n" +
+        "delegator instead. See working/constraints.md 11.\n",
+    );
+    process.exitCode = 1;
+  }
 }
 
 const [command, arg] = process.argv.slice(2);
