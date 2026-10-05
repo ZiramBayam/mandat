@@ -199,6 +199,10 @@ function recomputeClaims(header: AuthorityHeader): AuthorityClaims | null {
 }
 
 type ManagerLike = { disabled: (hash: Hex) => Promise<boolean> };
+/**
+ * `isLiveManifest` is the name on this local helper only. The ABI function it
+ * calls is `liveManifests`, and that is the name the contract actually has.
+ */
 type RegistryLike = {
   isRegistered: (hash: Hex) => Promise<boolean>;
   isLive: (hash: Hex) => Promise<boolean>;

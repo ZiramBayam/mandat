@@ -95,3 +95,47 @@ describe("EncoderLib parity", () => {
     expect(hashDelegation({ ...root, salt: 1n })).not.toBe(hashDelegation({ ...root, salt: 2n }));
   });
 });
+
+/**
+ * The DTK constants are read from the contract, not from our reading of its
+ * source. `ANY_DELEGATE` in particular was wrong in our address book for a
+ * while: it carried an extra trailing character, so it was 38 hex digits and
+ * not a well-formed address. Nothing caught it, because the comparisons that
+ * used it were in code with no callers. A live read is the only check that
+ * would have caught it.
+ */
+describe("DTK constants", () => {
+  it("ANY_DELEGATE matches the live DelegationManager", async () => {
+    const live = await client.readContract({
+      address: DTK.delegationManager as `0x${string}`,
+      abi: delegationManagerAbi,
+      functionName: "ANY_DELEGATE",
+    });
+    if (typeof live !== "string") throw new Error("unexpected ANY_DELEGATE return");
+    expect(DTK_CONSTANTS.ANY_DELEGATE.toLowerCase()).toBe(live.toLowerCase());
+  });
+
+  it("ROOT_AUTHORITY matches the live DelegationManager", async () => {
+    const live = await client.readContract({
+      address: DTK.delegationManager as `0x${string}`,
+      abi: delegationManagerAbi,
+      functionName: "ROOT_AUTHORITY",
+    });
+    if (typeof live !== "string") throw new Error("unexpected ROOT_AUTHORITY return");
+    expect(DTK_CONSTANTS.ROOT_AUTHORITY.toLowerCase()).toBe(live.toLowerCase());
+  });
+
+  it("ANY_DELEGATE is a well-formed 20-byte address", () => {
+    expect(DTK_CONSTANTS.ANY_DELEGATE).toMatch(/^0x[0-9a-fA-F]{40}$/);
+  });
+
+  it("domainHash matches the live DelegationManager", async () => {
+    const live = await client.readContract({
+      address: DTK.delegationManager as `0x${string}`,
+      abi: delegationManagerAbi,
+      functionName: "getDomainHash",
+    });
+    if (typeof live !== "string") throw new Error("unexpected getDomainHash return");
+    expect(DTK_CONSTANTS.domainHash.toLowerCase()).toBe(live.toLowerCase());
+  });
+});

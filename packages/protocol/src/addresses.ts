@@ -83,12 +83,17 @@ export const X402 = {
 
 /**
  * DTK constants read from the deployed contract. `ROOT_AUTHORITY` is
- * `bytes32(type(uint256).max)`; `ANY_DELEGATE` is `address(0xa11)`.
- * Both asserted in contracts/test/Smoke.t.sol.
+ * `bytes32(type(uint256).max)`; `ANY_DELEGATE` is `address(0xa11)`, which is
+ * 40 hex characters and ends in `0a11`.
+ *
+ * This value was wrong before: it carried an extra trailing `e`, so it was 38
+ * hex characters and not even a well-formed `Address`. Every comparison against
+ * it in chain.ts could never have matched. Cross-checked against the live
+ * `ANY_DELEGATE()` in packages/protocol/test/chain.test.ts.
  */
 export const DTK_CONSTANTS = {
   ROOT_AUTHORITY: "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-  ANY_DELEGATE: "0x0000000000000000000000000000000000a11e",
+  ANY_DELEGATE: "0x0000000000000000000000000000000000000a11",
   /**
    * Read from DelegationManager.getDomainHash() on testnet. The EIP-712 domain
    * excludes the verifying contract when hashed this way, so this same value is

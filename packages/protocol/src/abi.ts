@@ -10,13 +10,13 @@
 
 import type { Abi } from "viem";
 
-const caveatTuple = [
+export const caveatTuple = [
   { name: "enforcer", type: "address" },
   { name: "terms", type: "bytes" },
   { name: "args", type: "bytes" },
 ] as const;
 
-const delegationTuple = [
+export const delegationTuple = [
   { name: "delegate", type: "address" },
   { name: "delegator", type: "address" },
   { name: "authority", type: "bytes32" },
@@ -24,6 +24,9 @@ const delegationTuple = [
   { name: "salt", type: "uint256" },
   { name: "signature", type: "bytes" },
 ] as const;
+
+/** A bare `tuple[]` with no components cannot be encoded by viem. */
+export const DELEGATION_ARRAY_ABI = [{ type: "tuple[]", name: "delegations", components: delegationTuple }] as const;
 
 export const delegationManagerAbi = [
   // NOTE: signature is omitted from the DELEGATION_TYPEHASH
@@ -33,7 +36,10 @@ export const delegationManagerAbi = [
     stateMutability: "nonpayable",
     inputs: [
       { name: "_permissionContexts", type: "bytes[]" },
-      { name: "_modes", type: "uint8[]" },
+      // `ModeCode[]`, and `type ModeCode is bytes32` (erc7579 ModeLib.sol:55).
+      // `uint8[]` here would silently mis-encode the mode and every redemption
+      // would revert on calldata decoding instead of on the caveat.
+      { name: "_modes", type: "bytes32[]" },
       { name: "_executionCallDatas", type: "bytes[]" },
     ],
     outputs: [],
@@ -103,9 +109,41 @@ export const delegationManagerAbi = [
       },
     ],
   },
-  { type: "event", name: "EnabledDelegation", inputs: [] },
-  { type: "event", name: "DisabledDelegation", inputs: [] },
-  { type: "event", name: "SetDomain", inputs: [] },
+  // Shapes copied from DTK's own IDelegationManager. These were empty before,
+  // which made them useless to the explorer: an event with no inputs cannot be
+  // decoded, so a log-consumer reconstructing the chain from logs alone would
+  // have had nothing to read.
+  {
+    type: "event",
+    name: "EnabledDelegation",
+    inputs: [
+      { name: "delegationHash", type: "bytes32", indexed: true },
+      { name: "delegator", type: "address", indexed: true },
+      { name: "delegate", type: "address", indexed: true },
+      { name: "delegation", type: "tuple", components: delegationTuple, indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "DisabledDelegation",
+    inputs: [
+      { name: "delegationHash", type: "bytes32", indexed: true },
+      { name: "delegator", type: "address", indexed: true },
+      { name: "delegate", type: "address", indexed: true },
+      { name: "delegation", type: "tuple", components: delegationTuple, indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "SetDomain",
+    inputs: [
+      { name: "domainHash", type: "bytes32", indexed: true },
+      { name: "name", type: "string", indexed: false },
+      { name: "domainVersion", type: "string", indexed: false },
+      { name: "chainId", type: "uint256", indexed: false },
+      { name: "contractAddress", type: "address", indexed: true },
+    ],
+  },
 ] as const satisfies Abi;
 
 export const erc1271Abi = [

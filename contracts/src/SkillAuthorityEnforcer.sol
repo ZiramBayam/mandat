@@ -38,6 +38,10 @@ contract SkillAuthorityEnforcer is ICaveatEnforcer {
     error UnknownCheck(uint8 checks);
     error ManifestNotLive(bytes32 manifestHash);
     error ParentNotRegistered(bytes32 parentDelegationHash);
+    /// @dev The parent hop exists in the graph but is revoked, or one of its
+    ///      ancestors is. Reported separately from ParentNotRegistered because
+    ///      the two mean different things to whoever holds the delegation.
+    error AuthorityRevoked(bytes32 parentDelegationHash);
     error RedeemerHasNoIdentity(address redeemer);
     error MalformedTerms();
 
@@ -69,8 +73,21 @@ contract SkillAuthorityEnforcer is ICaveatEnforcer {
 
         if (t.checks & CHECK_GRAPH != 0) {
             // A root has no parent, so the check is skipped rather than failed.
-            if (t.parentDelegationHash != bytes32(0) && !REGISTRY.isRegistered(t.parentDelegationHash)) {
-                revert ParentNotRegistered(t.parentDelegationHash);
+            bytes32 parent_ = t.parentDelegationHash;
+            if (parent_ != bytes32(0)) {
+                // `isLive`, not `isRegistered`. This distinction is the whole
+                // point of the check, and getting it wrong makes revocation
+                // decorative: `isRegistered` only tests that the row exists, so
+                // a revoked parent still passes and a child of it keeps
+                // redeeming. `isLive` walks upward and fails on any revoked
+                // ancestor, which is what "withdrawing a root withdraws
+                // everything below it" has to mean.
+                //
+                // The two failure modes are separated so the reason is legible
+                // in a revert: an unknown parent is a wiring mistake, a revoked
+                // one is a withdrawal.
+                if (!REGISTRY.isRegistered(parent_)) revert ParentNotRegistered(parent_);
+                if (!REGISTRY.isLive(parent_)) revert AuthorityRevoked(parent_);
             }
         }
 
