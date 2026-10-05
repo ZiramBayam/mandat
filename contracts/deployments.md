@@ -1,25 +1,28 @@
 # Deployments
 
 Every address and tx hash below was read back from Monad testnet after the
-broadcast. Reproduction commands: `working/constraints.md` §10.
+broadcast, not copied from the script's own output. Reproduction commands:
+`working/constraints.md` §10.
 
 ## Monad testnet, chain 10143
 
-Deployed 26 Sep 2026 from `0xfa5AF5BAeB4aC500267D7189fa1f0AA923eCA894` (nonce 43).
+### Contracts we deployed
+
+Re-deployed 5 Okt 2026 after the graph-check fix described below. The previous
+pair is kept in git history, not here: nothing live depended on it.
 
 | Contract | Address | Deploy tx |
 |---|---|---|
-| `AuthorityRegistry` | `0x7B091E437dC1C211f342aaf776dbDEaB3Cc95e9B` | `0x332eba23e319309340013f0bf04ee02a062734080d651f4911bc0ee824f72cf0` |
-| `SkillAuthorityEnforcer` | `0xcEe98eFA34122dDB19C11B96FB638785d3738a4c` | `0x6c21b7f7402ced4e735bb66592dac56ee6f4e2ee0a16615449036bc80dbe659c` |
+| `AuthorityRegistry` | `0xE8F8d9f1AF1cc0b0bB1DB2ccC74851Bed23cbb00` | `0x1c2d9d11cab05366572dbcb1bdd5fefb54de53f169de6ea5fddcf226368fba73` |
+| `SkillAuthorityEnforcer` | `0x38D2d3e21087C25E83CEEcFa7FAdF0D0197b9ec9` | `0x247efd47f074d8e5fd4766bf95ad5a463b151499bb9db551ddff06f5506937e9` |
 
-Verified after deployment:
+Verified after deployment, read via `eth_call`:
 
 ```
 AuthorityRegistry.DELEGATION_MANAGER() = 0xdb9B1e94B5b69Df7e401DDbedE43491141047dB3
 AuthorityRegistry.ROOT_AUTHORITY()     = 0xffff...ffff
 AuthorityRegistry.ERC8004_IDENTITY()   = 0x0000...0000   (expected: none on testnet)
-AuthorityRegistry.delegationCount()    = 0
-SkillAuthorityEnforcer.REGISTRY()      = 0x7B091E437dC1C211f342aaf776dbDEaB3Cc95e9B
+SkillAuthorityEnforcer.REGISTRY()      = 0xE8F8d9f1AF1cc0b0bB1DB2ccC74851Bed23cbb00
 SkillAuthorityEnforcer.TERMS_VERSION() = 1
 SkillAuthorityEnforcer.CHECK_MASK()    = 7
 ```
@@ -29,10 +32,133 @@ SkillAuthorityEnforcer.CHECK_MASK()    = 7
 `working/constraints.md` §3.2 for why we are not deploying a registry to
 testnet.
 
+### Root delegator
+
+The user-facing root delegator for the demo. A `MultiSigDeleGator` behind an
+ERC-1967 proxy, signer = the user's EOA, threshold 1.
+
+| | Address | Deploy tx |
+|---|---|---|
+| Implementation | `0x29aCEbb657889507f3960CBEB959e0f8247539d1` | `0x3d47175fe5550b258936c89b813b6eb109c430b2bd7fb417cb0a781b91c87d2b` |
+| **Root delegator** | `0xDf9E68Bee379A298709aeb94072d1b1b9A333921` | `0xbc0f39b39d72cbc382271b3d6f8e9a309159b9b411cc0ea86a01c71f67d4b183` |
+
+Verified on chain: `NAME()` = `"MultiSigDeleGator"`, `VERSION()` = `"1.3.0"`,
+`isSigner(user)` = `true`, `delegationManager()` = DTK's manager.
+
+**Why not the EOA.** The intended shape was one passkey, one EOA,
+7702-delegated. Monad testnet accepts a type `0x04` transaction, includes it
+with status success and charges 46.382 gas for it, but never stores the
+delegation: `eth_getCode` on the account stays `0x` in every block, `VERSION()`
+returns nothing, and the account can still send plain transfers. The
+authorization transaction is `0xb60abd57e446c0344b163f08389e872b8b369e032d916fc659fb539773ef9c47`.
+Full evidence in `working/constraints.md` §11, tracked as OPEN-04.
+
+`redeemDelegations` executes through
+`IDeleGatorCore(rootDelegator).executeFromExecutor`, so the root delegator must
+carry code. A contract delegator is verified over ERC-1271, which
+`AuthorityRegistry.sol:112-115` already supported.
+
+### Caveat enforcers
+
+Deployed 26 Sep 2026, chain 10143. MetaMask publishes `AllowedTargets`,
+`AllowedMethods` and `ERC20PeriodTransfer` at the same addresses on both chains;
+the last two are ours, because DTK's CREATE2 salt is not published and their
+addresses cannot be derived.
+
+| Enforcer | Address | Source |
+|---|---|---|
+| `AllowedTargets` | `0xA3f6693F12eF86479472C1445893335359A793D9` | ours, parity with the live one asserted |
+| `AllowedMethods` | `0x7cF10cEAddEe52019F123822C432481E1FD311b5` | ours, parity with the live one asserted |
+| `ERC20PeriodTransfer` | `0x40CA8Ed973609be0A28d62805289B2451265005f` | ours, parity with the live one asserted |
+| `Timestamp` | `0xEcee8037a4BaABD46f8D35c000bF7AF385CdE345` | ours, no live counterpart |
+| `LimitedCalls` | `0xc713A1439D395C25eC41fAAcBF68bcA1ecd47041` | ours, no live counterpart |
+
+Parity is asserted in `test/CaveatEnforcerParity.t.sol` by decoding identical
+terms through the live enforcer and through ours, not by comparing bytecode.
+
+## G6 — the two transactions the project exists to produce
+
+Produced 5 Okt 2026. Both read back from chain.
+
+| | Tx | Result |
+|---|---|---|
+| Redeem **within** cap (0.1 of 0.5 WMON) | `0x0c42158f7eb615d4537492e4bb602c874797a569f2092eef2eeeed5cc906508b` | **success**, block 68368270 |
+| Redeem **over** cap (0.8 of 0.5 WMON) | reverted | `ERC20PeriodTransferEnforcer:transfer-amount-exceeded` |
+
+The revert reason is DTK's own enforcer, not our middleware. That distinction is
+the whole point: a seller refusing a request proves only that the seller works.
+
+Balances read back after both, not from the script's own log:
+
+```
+root delegator 0xDf9E68…  0.6 WMON   (0.7 before)
+sub-agent       0xeDaeDE…  0.3 WMON   (0.2 before)
+```
+
+The successful transaction emitted a `Transfer` event from the root delegator to
+the sub-agent for exactly 0.1 WMON. A redemption that moved no tokens would have
+produced a receipt too, so the balance assertion is the evidence, and it is
+asserted in `Redeem.t.sol::test_T13_successfulRedemptionMovesTheBalance` as well.
+
+### Supporting transactions
+
+| | Tx |
+|---|---|
+| Fund USER 1.5 MON | `0x618397f14a31d0f89d…` |
+| Fund AGENT 0.4 MON | `0x3840f78c3730743a7c…` |
+| Fund SUBAGENT 0.25 MON | `0x6c93a4e1d3c6970bde…` |
+| Wrap 1 MON into WMON | `0x7e872315ae45df9afd3cc93b7c0a992049e0bf1aafffda9a6a4b23d3ae5a72dd` |
+| WMON to root delegator | `0xdc67f8117cbdd90e510ce77c102dc2dcba047cbfa9421ca5cce0420d954bc8bf` |
+| `registerManifest` | `0xe4e48d21d09ee6c6814954f28bbe3cc373800272478709dc74eb5df51d3bf29a` |
+| `bindAgent(agent, 1042)` | `0x57fba8054b483bc401eb2256768a60c24ca7f10bf1ab85dadb5f4811c96202f4` |
+| `bindAgent(sub-agent, 1043)` | `0xab63bf03e2df1c82466ec6242e754f7f9580d33083afcc5d38e42c0f72f8efd0` |
+| `registerDelegation` | `0xcc155a71ec3e5e176e557867b1fc6fa02a06c682a344a4bba6e9b5ac4d0d4ac4` |
+
+Delegation hash `0x3e3c33a03e52ec23d14aa678632c1f78aa47271b03000b9eb20cb7e8b0c09880`,
+root authority `0xffff…ffff`, manifest `0xeb4c4e02…31cf6`.
+
+The authority graph, read via `eth_call` with no server:
+
+```
+delegator    0xDf9E68…3921   (the contract root delegator)
+delegate     0x2D5d77…75A2   (the agent EOA that paid gas)
+agentId      1042
+parentHash   0xffff…ffff     (root)
+manifestHash 0xeb4c4e02…31cf6
+lineage      depth 1
+```
+
+## Revocation, and the bug it exposed
+
+`revokeDelegation` is `0xb02b77b5b7071455e9608a1d8a25e937bfedfdbc7808bedb82400481df5b7f0e`
+(block 68368276). After it, `isRegistered` stayed `true` and `isLive` became
+`false`, and the next redemption reverted.
+
+Getting there took two fixes to `SkillAuthorityEnforcer`, both found by running
+this flow rather than by reading the contract:
+
+1. `GRAPH` read `isRegistered`, which cannot see `revokedAt`, so a revoked
+   delegation still passed.
+2. Even after switching to `isLive`, `GRAPH` only read
+   `terms.parentDelegationHash`. A root has no parent, so the root itself was
+   never checked, and a revoked root kept redeeming. This is what the live run
+   caught.
+
+`GRAPH` now checks the delegation being redeemed, using the `_delegationHash`
+argument the hook already received and ignored, and its parent when there is
+one. `NotInGraph`, `ParentNotRegistered` and `AuthorityRevoked` are distinct so a
+revert says which thing happened.
+
+**The limit worth stating.** DTK has `disabledDelegations` and checks it for
+every hop including the root. That is DTK's list, and our registry never writes
+to it. What we enforce is `revokedAt` in `AuthorityRegistry`, read by our own
+enforcer. A delegator can additionally call DTK's `disableDelegation` directly;
+we do not, and the README should not imply the two are the same mechanism.
+
 ## Monad mainnet, chain 143
 
-Not yet deployed. Scheduled as gate G13 in `working/plan.md` §2, after the video
-is recorded. Same script, no changes needed: on mainnet
+Not deployed. No MON budget, and gate G13 in `working/plan.md` §2 puts it after
+the video is recorded. Same script, no changes needed: on mainnet
 `resolveIdentityRegistry()` returns the live registry at
 `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` instead of zero, so
 `bindAgentFromERC8004` becomes the real path.
@@ -42,24 +168,9 @@ is recorded. Same script, no changes needed: on mainnet
 ```bash
 cd contracts
 forge script script/Deploy.s.sol:Deploy --rpc-url https://testnet-rpc.monad.xyz --broadcast
+forge script script/DeployRootDeleGator.s.sol:DeployRootDeleGator \
+  --rpc-url https://testnet-rpc.monad.xyz --broadcast
 ```
-
-## Caveat enforcers
-
-Deployed 26 Sep 2026, chain 10143. The first three are MetaMask's own and live at
-the same addresses on both chains; the last two are ours, because DTK's CREATE2
-salt is not published and their addresses cannot be derived.
-
-| Enforcer | Address | Source |
-|---|---|---|
-| `AllowedTargets` | `0xA3f6693F12eF86479472C1445893335359A793D9` | ours, parity with `0x7F20f61b…` asserted |
-| `AllowedMethods` | `0x7cF10cEAddEe52019F123822C432481E1FD311b5` | ours, parity with `0x2c21fD0C…` asserted |
-| `ERC20PeriodTransfer` | `0x40CA8Ed973609be0A28d62805289B2451265005f` | ours, parity with `0x474e3Ae7…` asserted |
-| `Timestamp` | `0xEcee8037a4BaABD46f8D35c000bF7AF385CdE345` | ours, no live counterpart |
-| `LimitedCalls` | `0xc713A1439D395C25eC41fAAcBF68bcA1ecd47041` | ours, no live counterpart |
-
-Parity is asserted in `test/CaveatEnforcerParity.t.sol` by decoding identical
-terms through the live enforcer and through ours, not by comparing bytecode.
 
 ## Compiled envelope
 
@@ -74,4 +185,6 @@ pnpm envelope compile ../../contracts/fixtures/wmon-spend/SKILL.md \
 ```
 
 `ENVELOPE_NOW` in `contracts/.env` pins the timestamp, so the output is
-reproducible and the recorded demo matches the committed file.
+reproducible and the recorded demo matches the committed file. It must be set to
+a time at or before the recording, because `ERC20PeriodTransfer` rejects a
+`startDate` in the future and `Timestamp` rejects an expiry in the past.

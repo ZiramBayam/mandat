@@ -110,13 +110,22 @@ abstract contract Base is Test {
         return abi.encode(SkillAuthorityEnforcer.Terms({version: 1, checks: checks, manifestHash: manifest, parentDelegationHash: parent}));
     }
 
+    // CHECK_GRAPH asserts on the delegation itself as well as on its parent, so
+    // callers that enable it must pass the delegation hash via _hookFor.
     function _hook(uint8 checks, bytes32 manifest, bytes32 parent, address redeemer) internal view {
+        _hookFor(checks, manifest, parent, bytes32(0), redeemer);
+    }
+
+    function _hookFor(uint8 checks, bytes32 manifest, bytes32 parent, bytes32 delegationHash, address redeemer)
+        internal
+        view
+    {
         enforcer.beforeHook(
             _mandateTerms(checks, manifest, parent),
             "",
             ModeCode.wrap(0),
             "",
-            bytes32(0),
+            delegationHash,
             user,
             redeemer
         );

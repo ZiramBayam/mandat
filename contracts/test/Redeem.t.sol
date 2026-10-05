@@ -311,8 +311,15 @@ contract RedeemTest is Base {
         // Fresh keys so the parent slot is genuinely cold.
         parentHash = live;
 
+        // The delegation itself must be registered and live for the graph check
+        // to pass, so a real child of `live` is what gets measured.
+        bytes32 childHash = dm.getDelegationHash(
+            _child(agentPk, agent, subAgent, live, _caveats(CAP, live))
+        );
+        _register(_child(agentPk, agent, subAgent, live, _caveats(CAP, live)), MANIFEST);
+
         uint256 gasBefore = gasleft();
-        enforcer.beforeHook(_mandateTerms(0x07, MANIFEST, parentHash), "", ModeCode.wrap(0), _execution(0.1 ether), bytes32(0), user, agent);
+        enforcer.beforeHook(_mandateTerms(0x07, MANIFEST, live), "", ModeCode.wrap(0), _execution(0.1 ether), childHash, user, agent);
         uint256 spent = gasBefore - gasleft();
 
         console.log("beforeHook gas, three checks cold:", spent);

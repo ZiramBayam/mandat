@@ -35,21 +35,57 @@ contract SkillAuthorityEnforcerTest is Base {
 
     /* ---------------- GRAPH ---------------- */
 
-    /// T8: a root has no parent, so the check is skipped, not failed.
-    function test_graphSkippedForRoot() public {
-        _hook(0x02, bytes32(0), bytes32(0), agent);
+    /// T8: a root has no parent, so that part is skipped rather than failed. The
+    /// delegation itself is still checked, which is the point.
+    function test_graphPassesForARegisteredRoot() public {
+        Caveat[] memory cs = _oneCaveat(address(enforcer), _mandateTerms(0x07, MANIFEST, bytes32(0)));
+        bytes32 h = _register(_root(userPk, user, agent, cs), MANIFEST);
+        _hookFor(0x02, bytes32(0), bytes32(0), h, agent);
     }
 
-    /// T14: a chain whose hop is absent from the graph cannot execute.
+    /// T14: a hop absent from the graph cannot execute.
     function test_graphRevertsWhenParentUnknown() public {
+        Caveat[] memory cs = _oneCaveat(address(enforcer), _mandateTerms(0x07, MANIFEST, bytes32(0)));
+        bytes32 h = _register(_root(userPk, user, agent, cs), MANIFEST);
         vm.expectRevert(abi.encodeWithSelector(SkillAuthorityEnforcer.ParentNotRegistered.selector, keccak256("ghost")));
-        _hook(0x02, bytes32(0), keccak256("ghost"), agent);
+        _hookFor(0x02, bytes32(0), keccak256("ghost"), h, agent);
+    }
+
+    /**
+     * The delegation itself must be in the graph. This is the case that made
+     * revocation decorative: a root delegation has no parent, so an enforcer that
+     * only read `parentDelegationHash` never checked the root at all, and a
+     * revoked root went on redeeming. Found by running the live G6 flow, not by
+     * reading the contract.
+     */
+    function test_graphRevertsWhenTheDelegationItselfIsUnknown() public {
+        vm.expectRevert(abi.encodeWithSelector(SkillAuthorityEnforcer.NotInGraph.selector, keccak256("nope")));
+        _hookFor(0x02, bytes32(0), bytes32(0), keccak256("nope"), agent);
+    }
+
+    /**
+     * A revoked ROOT must stop working. Without this the chain keeps
+     * redeeming after `revokeDelegation`, which is the opposite of what the
+     * registry is for.
+     */
+    function test_graphRevertsWhenTheRootItselfIsRevoked() public {
+        Caveat[] memory cs = _oneCaveat(address(enforcer), _mandateTerms(0x07, MANIFEST, bytes32(0)));
+        bytes32 h = _register(_root(userPk, user, agent, cs), MANIFEST);
+
+        _hookFor(0x02, bytes32(0), bytes32(0), h, agent);
+
+        vm.prank(user);
+        registry.revokeDelegation(h);
+
+        vm.expectRevert(abi.encodeWithSelector(SkillAuthorityEnforcer.AuthorityRevoked.selector, h));
+        _hookFor(0x02, bytes32(0), bytes32(0), h, agent);
     }
 
     function test_graphPassesWhenParentRegistered() public {
         Caveat[] memory cs = _oneCaveat(address(enforcer), _mandateTerms(0x07, MANIFEST, bytes32(0)));
-        bytes32 h = _register(_root(userPk, user, agent, cs), MANIFEST);
-        _hook(0x02, bytes32(0), h, agent);
+        bytes32 parentHash = _register(_root(userPk, user, agent, cs), MANIFEST);
+        bytes32 childHash = _register(_child(agentPk, agent, subAgent, parentHash, cs), MANIFEST);
+        _hookFor(0x02, bytes32(0), parentHash, childHash, agent);
     }
 
     /// A revoked parent must fail the graph check. This is the case that makes
@@ -59,16 +95,23 @@ contract SkillAuthorityEnforcerTest is Base {
     /// test in Redeem.t.sol, not by review.
     function test_graphRevertsWhenParentRevoked() public {
         Caveat[] memory cs = _oneCaveat(address(enforcer), _mandateTerms(0x07, MANIFEST, bytes32(0)));
-        bytes32 h = _register(_root(userPk, user, agent, cs), MANIFEST);
+        bytes32 parentHash = _register(_root(userPk, user, agent, cs), MANIFEST);
+        bytes32 childHash = _register(_child(agentPk, agent, subAgent, parentHash, cs), MANIFEST);
+
+        _hookFor(0x02, bytes32(0), parentHash, childHash, agent);
 
         vm.prank(user);
-        registry.revokeDelegation(h);
+        registry.revokeDelegation(parentHash);
 
-        assertTrue(registry.isRegistered(h), "the row survives revocation");
-        assertFalse(registry.isLive(h), "but it is not live");
 
-        vm.expectRevert(abi.encodeWithSelector(SkillAuthorityEnforcer.AuthorityRevoked.selector, h));
-        _hook(0x02, bytes32(0), h, agent);
+        assertTrue(registry.isRegistered(parentHash), "the row survives revocation");
+        assertFalse(registry.isLive(parentHash), "but it is not live");
+
+        // Revoking the parent makes the child not live, because `isLive` walks
+        // upward. So the delegation's own check is what fires first, and the
+        // revert names the child rather than the revoked parent.
+        vm.expectRevert(abi.encodeWithSelector(SkillAuthorityEnforcer.AuthorityRevoked.selector, childHash));
+        _hookFor(0x02, bytes32(0), parentHash, childHash, agent);
     }
 
     /// The parent may be live itself while an ancestor above it is revoked.
@@ -87,11 +130,11 @@ contract SkillAuthorityEnforcerTest is Base {
         assertFalse(registry.isLive(parent), "revoking the root propagates liveness down");
         assertTrue(registry.isRegistered(parent), "but not registration");
 
-        // The revert names the hop the delegation points at, not the ancestor
-        // that was actually revoked. Reading `ancestors` from the registry is
-        // what a caller would do to find out which one it was.
+        // The revert names the delegation being redeemed, not the ancestor that
+        // was actually revoked. A caller that wants to know which ancestor went
+        // away walks the registry's own lineage view.
         vm.expectRevert(abi.encodeWithSelector(SkillAuthorityEnforcer.AuthorityRevoked.selector, parent));
-        _hook(0x02, bytes32(0), parent, agent);
+        _hookFor(0x02, bytes32(0), parent, parent, agent);
     }
 
     /* ---------------- IDENTITY ---------------- */
@@ -149,11 +192,11 @@ contract SkillAuthorityEnforcerTest is Base {
     /// README's gas claim untrue.
     function test_gasBudget() public {
         Caveat[] memory cs = _oneCaveat(address(enforcer), _mandateTerms(ALL, MANIFEST, bytes32(0)));
-        _register(_root(userPk, user, agent, cs), MANIFEST);
+        bytes32 h = _register(_root(userPk, user, agent, cs), MANIFEST);
 
         bytes memory terms = _mandateTerms(ALL, MANIFEST, bytes32(0));
         uint256 gasBefore = gasleft();
-        enforcer.beforeHook(terms, "", ModeCode.wrap(0), "", bytes32(0), user, agent);
+        enforcer.beforeHook(terms, "", ModeCode.wrap(0), "", h, user, agent);
         uint256 used = gasBefore - gasleft();
         emit log_named_uint("beforeHook, three checks, cold", used);
         assertLt(used, 25_000, "well clear of any order-of-magnitude regression");
