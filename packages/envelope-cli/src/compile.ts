@@ -10,12 +10,15 @@
  * asserts every term against the live enforcer's own getTermsInfo().
  */
 
-import { type Address, type Hex, parseAbiParameters } from "viem";
+import { type Address, type Hex } from "viem";
 import {
   CHECK_GRAPH,
   CHECK_IDENTITY,
   CHECK_MANIFEST,
+  TERMS_VERSION,
+  ZERO_ADDRESS,
   ZERO_HASH,
+  describeChecks as describeCheckBits,
   encodeAllowedMethods,
   encodeAllowedTargets,
   encodeERC20PeriodTransfer,
@@ -35,6 +38,13 @@ export type CompileInput = {
   manifestHash: Hex;
   /** Zero for a root delegation. */
   parentDelegationHash?: Hex;
+  /**
+   * Seller this envelope may be spent at. Zero, the default, means any seller:
+   * a delegation minted for general use stays usable everywhere. Naming one makes
+   * it exclusive, and a seller reads it back out of `terms` to refuse a request
+   * from a delegation minted for somebody else.
+   */
+  allowedSeller?: Address;
   checks?: number;
   /** Injected so a compiled envelope is reproducible and testable. */
   now?: number;
@@ -65,6 +75,8 @@ export type Compiled = {
     maxCalls: number | null;
     checks: string[];
     manifestHash: Hex;
+    /** Zero means the envelope is not scoped to a single seller. */
+    allowedSeller: Address;
   };
 };
 
@@ -141,10 +153,16 @@ export function compileEnvelope(input: CompileInput): Compiled {
 
   const checks = input.checks ?? (CHECK_MANIFEST | CHECK_GRAPH | CHECK_IDENTITY);
   const parentHash = input.parentDelegationHash ?? ZERO_HASH;
-  const encoded =
-    checks & CHECK_MANIFEST
-      ? encodeTerms({ checks, manifestHash, parentDelegationHash: parentHash })
-      : encodeTerms({ checks, parentDelegationHash: parentHash });
+  const seller = input.allowedSeller ?? ZERO_ADDRESS;
+  // The manifest digest only goes in when the MANIFEST check is on. `encodeTerms`
+  // rejects the combination in both directions, so a caller cannot end up with
+  // terms that carry a digest nobody checks.
+  const encoded = encodeTerms({
+    checks,
+    ...(checks & CHECK_MANIFEST ? { manifestHash } : {}),
+    parentDelegationHash: parentHash,
+    allowedSeller: seller,
+  });
 
   const caveatIndex = caveats.length - 1;
   caveats[caveatIndex] = { enforcer: enforcers.skillAuthority, terms: encoded, args: "0x" };
@@ -153,10 +171,11 @@ export function compileEnvelope(input: CompileInput): Compiled {
     caveats,
     terms: encoded,
     decodedTerms: {
-      version: 1,
+      version: TERMS_VERSION,
       checks,
       manifestHash: checks & CHECK_MANIFEST ? manifestHash : ZERO_HASH,
       parentDelegationHash: parentHash,
+      allowedSeller: seller,
     },
     summary: {
       targets,
@@ -165,18 +184,11 @@ export function compileEnvelope(input: CompileInput): Compiled {
       notBefore: 0,
       notAfter,
       maxCalls,
-      checks: describeChecks(checks),
+      checks: describeCheckBits(checks),
       manifestHash: checks & CHECK_MANIFEST ? manifestHash : ZERO_HASH,
+      allowedSeller: seller,
     },
   };
-}
-
-function describeChecks(checks: number): string[] {
-  const names: string[] = [];
-  if (checks & CHECK_MANIFEST) names.push("MANIFEST");
-  if (checks & CHECK_GRAPH) names.push("GRAPH");
-  if (checks & CHECK_IDENTITY) names.push("IDENTITY");
-  return names;
 }
 
 /**
@@ -216,4 +228,4 @@ export function serialiseForChainTest(compiled: Compiled, enforcers: EnforcerAdd
   );
 }
 
-export { periodToSeconds, parseAbiParameters };
+export { periodToSeconds };

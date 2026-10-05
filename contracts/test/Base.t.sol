@@ -106,8 +106,26 @@ abstract contract Base is Test {
         return _register(d, MANIFEST);
     }
 
+    // The fourth argument is the seller; zero means "any seller". The
+    // _mandateTermsFor variant takes it explicitly where the test cares.
     function _mandateTerms(uint8 checks, bytes32 manifest, bytes32 parent) internal pure returns (bytes memory) {
-        return abi.encode(SkillAuthorityEnforcer.Terms({version: 1, checks: checks, manifestHash: manifest, parentDelegationHash: parent}));
+        return _mandateTermsFor(checks, manifest, parent, address(0));
+    }
+
+    function _mandateTermsFor(uint8 checks, bytes32 manifest, bytes32 parent, address seller)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return abi.encode(
+            SkillAuthorityEnforcer.Terms({
+                version: 2,
+                checks: checks,
+                manifestHash: manifest,
+                parentDelegationHash: parent,
+                allowedSeller: seller
+            })
+        );
     }
 
     // CHECK_GRAPH asserts on the delegation itself as well as on its parent, so

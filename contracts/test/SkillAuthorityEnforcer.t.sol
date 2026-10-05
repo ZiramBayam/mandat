@@ -158,13 +158,55 @@ contract SkillAuthorityEnforcerTest is Base {
 
     /* ---------------- fail-closed on malformed terms ---------------- */
 
-    /// T6: a version we do not understand must revert, not be tolerated.
+    /**
+     * T6: a version we do not understand must revert, not be tolerated.
+     *
+     * A future version, not a past one. Terms are versioned so that adding a
+     * field never reinterprets a delegation that is already live: v1 is now
+     * unknown, and a v1 delegation is refused rather than read as a v2 with an
+     * unset seller, which would silently widen what it is allowed to do.
+     */
     function test_unsupportedVersionReverts() public {
         bytes memory terms = abi.encode(
-            SkillAuthorityEnforcer.Terms({version: 2, checks: ALL, manifestHash: MANIFEST, parentDelegationHash: bytes32(0)})
+            SkillAuthorityEnforcer.Terms({version: 3, checks: ALL, manifestHash: MANIFEST, parentDelegationHash: bytes32(0), allowedSeller: address(0)})
         );
-        vm.expectRevert(abi.encodeWithSelector(SkillAuthorityEnforcer.UnsupportedTermsVersion.selector, uint8(2)));
+        vm.expectRevert(abi.encodeWithSelector(SkillAuthorityEnforcer.UnsupportedTermsVersion.selector, uint8(3)));
         enforcer.beforeHook(terms, "", ModeCode.wrap(0), "", bytes32(0), user, agent);
+    }
+
+    /// v1 is refused rather than read as v2. The delegation it encoded has four
+    /// fields, so it is also the wrong length; either way it must not run.
+    function test_v1TermsAreRejectedNotUpgraded() public {
+        bytes memory v1 = abi.encode(uint8(1), uint8(ALL), MANIFEST, bytes32(0));
+        vm.expectRevert(SkillAuthorityEnforcer.MalformedTerms.selector);
+        enforcer.beforeHook(v1, "", ModeCode.wrap(0), "", bytes32(0), user, agent);
+    }
+
+    /* ---------------- seller scope ---------------- */
+
+    /**
+     * The seller reads its scope out of `terms` with one call instead of
+     * decoding the blob. Zero means the delegation is not scoped to anyone.
+     */
+    function test_allowedSellerIsReadable() public {
+        address seller = makeAddr("seller");
+        assertEq(enforcer.allowedSellerOf(_mandateTermsFor(ALL, MANIFEST, bytes32(0), seller)), seller);
+        assertEq(enforcer.allowedSellerOf(_mandateTerms(ALL, MANIFEST, bytes32(0))), address(0));
+    }
+
+    function test_allowedSellerRevertsOnUnknownVersion() public {
+        bytes memory terms = abi.encode(
+            SkillAuthorityEnforcer.Terms({version: 9, checks: ALL, manifestHash: MANIFEST, parentDelegationHash: bytes32(0), allowedSeller: address(0)})
+        );
+        vm.expectRevert(abi.encodeWithSelector(SkillAuthorityEnforcer.UnsupportedTermsVersion.selector, uint8(9)));
+        enforcer.allowedSellerOf(terms);
+    }
+
+    /// Terms are five fields, so 160 bytes. Asserted because a silent length
+    /// change is the failure mode that reverts inside someone else's call.
+    function test_termsLengthIsFiveWords() public {
+        assertEq(enforcer.TERMS_LENGTH(), 160);
+        assertEq(_mandateTerms(ALL, MANIFEST, bytes32(0)).length, 160);
     }
 
     /// T7: an unknown check bit must revert. Ignoring it would let a delegation

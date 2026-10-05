@@ -114,8 +114,8 @@ contract CompiledEnvelopeTest is Test {
         assertEq(json.readUint(".caveatCount"), 6, "targets, methods, period, timestamp, calls, mandat");
     }
 
-    function test_skillAuthorityTermsAre128Bytes() public {
-        assertEq(_terms("skillAuthority").length, 128, "SkillAuthorityEnforcer terms are 4 words");
+    function test_skillAuthorityTermsAre160Bytes() public {
+        assertEq(_terms("skillAuthority").length, 160, "SkillAuthorityEnforcer terms are 5 words: version, checks, manifest, parent, seller");
     }
 
     /* ---------------- the manifest is what the terms say ---------------- */

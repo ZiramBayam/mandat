@@ -23,11 +23,15 @@ export type FeedStatus = {
   lastCommitState: CommitState | null;
 };
 
+/** One head off the feed, or null for a keepalive that carried no block. */
+export type Head = { commitState: CommitState; blockNumber: number; blockHash: string };
+
 export class CommitFeed {
   readonly #index = new CommitIndex();
   #socket: WebSocket | null = null;
   #lastState: CommitState | null = null;
   #onStatus: (() => void) | null = null;
+  #onHead: ((head: Head) => void) | null = null;
 
   constructor(private readonly chain: MonadChain = MONAD_TESTNET) {}
 
@@ -54,6 +58,13 @@ export class CommitFeed {
       const head = this.#index.ingest(parsed.params.result);
       if (head !== null) {
         this.#lastState = head.commitState;
+        this.#onHead?.({
+          commitState: head.commitState,
+          // The payload carries `number` and `hash` as hex strings; parse the
+          // number once here so consumers do not each re-derive it.
+          blockNumber: Number.parseInt(head.number, 16),
+          blockHash: head.hash,
+        });
         this.#onStatus?.();
       }
     });
@@ -69,6 +80,23 @@ export class CommitFeed {
       this.#index.setConnected(false);
       this.#onStatus?.();
     });
+  }
+
+  /**
+   * Observe every head as it arrives.
+   *
+   * Exposed so a consumer can feed a CommitIndex of its own rather than reading
+   * this class's internals. The seller used to open a second socket instead, which
+   * meant two views of commitState and a release decision that could depend on
+   * either.
+   *
+   * Returns an unsubscribe function, because the socket outlives most callers.
+   */
+  subscribe(onHead: (head: Head) => void): () => void {
+    this.#onHead = onHead;
+    return () => {
+      if (this.#onHead === onHead) this.#onHead = null;
+    };
   }
 
   disconnect(): void {

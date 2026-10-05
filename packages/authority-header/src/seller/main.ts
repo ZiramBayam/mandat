@@ -7,55 +7,96 @@
  *     Monad state and denies when the check says deny.
  *  2. It holds the resource until the commit state reaches the tier's threshold,
  *     and withholds when the state is unknown. See working/architecture.md 8.
+ *
+ * Every refusal is recorded and signed. A seller that can quietly serve or
+ * quietly deny is not auditable, and an audit record nobody can verify is not a
+ * record. See `recordDecision` below.
+ *
+ * Nothing here is a shortcut. If the chain cannot be read, the answer is a 503
+ * and not a guess; if the commit state is unknown, the answer is to withhold.
  */
 
 import { createServer } from "node:http";
-import { createPublicClient, http, type Address } from "viem";
+import { appendFileSync, mkdirSync } from "node:fs";
+import { createPublicClient, http, type Address, type Hex } from "viem";
 import { CommitIndex, MONAD_TESTNET, X402, mayRelease, policyFor } from "@mandat/protocol";
-import { verifyAuthority, type SellerConfig, type SellerDecision } from "../protocol/verify.js";
+import { signDecision, verifyAuthority, type SellerDecision, type SellerConfig } from "../protocol/verify.js";
+import { verifyPayment } from "../protocol/payment.js";
+import { CommitFeed } from "@mandat/three-light";
 import { DEMO_TIERS } from "./tiers.js";
-import { MONAD_TESTNET as chainConfig } from "@mandat/protocol";
 
 const PORT = Number(process.env["SELLER_PORT"] ?? "4020");
 const SELLER = (process.env["SELLER_ADDRESS"] ?? "0x0000000000000000000000000000000000000000") as Address;
 const REGISTRY = (process.env["AUTHORITY_REGISTRY"] ?? "0x0000000000000000000000000000000000000000") as Address;
 const ENFORCER = (process.env["SKILL_AUTHORITY_ENFORCER"] ?? "0x0000000000000000000000000000000000000000") as Address;
+const ENFORCER_PERIOD = (process.env["ENFORCER_ERC20_PERIOD"] ?? "0x0000000000000000000000000000000000000000") as Address;
+const ENFORCER_TIMESTAMP = (process.env["ENFORCER_TIMESTAMP"] ?? "0x0000000000000000000000000000000000000000") as Address;
 
-if (REGISTRY === "0x0000000000000000000000000000000000000000" || ENFORCER === "0x0000000000000000000000000000000000000000") {
+/** Signing key for the audit trail. Separate from the pay-to address on purpose. */
+const AUDIT_KEY = process.env["SELLER_AUDIT_PRIVATE_KEY"] as Hex | undefined;
+const AUDIT_LOG = process.env["SELLER_AUDIT_LOG"] ?? "seller-decisions.jsonl";
+
+const REQUIRED_ENV = {
+  AUTHORITY_REGISTRY: REGISTRY,
+  SKILL_AUTHORITY_ENFORCER: ENFORCER,
+  ENFORCER_ERC20_PERIOD: ENFORCER_PERIOD,
+  ENFORCER_TIMESTAMP: ENFORCER_TIMESTAMP,
+};
+
+const ZERO = "0x0000000000000000000000000000000000000000";
+const missing = Object.entries(REQUIRED_ENV).filter(([, value]) => value === ZERO);
+if (missing.length > 0) {
   process.stderr.write(
-    "AUTHORITY_REGISTRY and SKILL_AUTHORITY_ENFORCER must be set. The seller verifies against real\n" +
-      "deployed contracts and refuses to run against placeholders. Deploy first (working/plan.md G2).\n",
+    `${missing.map(([name]) => name).join(", ")} must be set. The seller verifies against real\n` +
+      "deployed contracts and refuses to run against placeholders.\n",
   );
   process.exit(1);
 }
 
-const client = createPublicClient({ transport: http(chainConfig.rpc) });
+// `batch.multicall` is not an optimisation here: the public testnet endpoint
+// rate-limits eth_call to 25 rps, and a four-hop chain is already more reads
+// than that allows serially. See working/constraints.md 4.3.
+const client = createPublicClient({ transport: http(MONAD_TESTNET.rpc), batch: { multicall: true } });
+
+/**
+ * One commit index, owned by @mandat/three-light.
+ *
+ * This used to open a second socket inline while @mandat/three-light existed to
+ * do exactly this. Two subscriptions to the same feed means two views of
+ * commitState, and the release decision must depend on one.
+ */
+const feed = new CommitFeed(MONAD_TESTNET);
+feed.connect();
+
 const commitIndex = new CommitIndex();
-
-// The commit index is the one thing that cannot be faked. commitState exists
-// only on the monadNewHeads subscription, so this socket must be alive before
-// any payment is accepted, and the server refuses to serve without it.
-const socket = new WebSocket(chainConfig.wss);
-socket.addEventListener("open", () => {
-  commitIndex.setConnected(true);
-  socket.send(
-    JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_subscribe", params: ["monadNewHeads"] }),
-  );
-});
-socket.addEventListener("close", () => commitIndex.setConnected(false));
-socket.addEventListener("error", () => commitIndex.setConnected(false));
-socket.addEventListener("message", (event) => {
-  const data = JSON.parse(String(event.data)) as { params?: { result?: unknown } };
-  if (data.params?.result !== undefined) commitIndex.ingest(data.params.result);
+/**
+ * Bridge the package's feed into the index the policy reads.
+ *
+ * Kept explicit rather than having CommitFeed expose its own index: the policy
+ * functions operate on an index, and a second representation of "how final is
+ * this block" is the exact failure this package exists to prevent.
+ */
+const unsubscribe = feed.subscribe((head) => {
+  if (head !== null) commitIndex.ingest(head);
 });
 
-const config: SellerConfig = {
-  chainId: chainConfig.chainId,
+/**
+ * Built per request because `requestedTier` is part of the decision: the same
+ * seller, same registry, refuses the expensive dataset and serves the cheap one
+ * purely on what was asked for.
+ */
+function configFor(tierName: string): SellerConfig {
+  return {
+  chainId: MONAD_TESTNET.chainId,
   seller: SELLER,
+  requestedTier: tierName,
   registry: REGISTRY,
   skillEnforcer: ENFORCER,
+  erc20PeriodEnforcer: ENFORCER_PERIOD,
+  timestampEnforcer: ENFORCER_TIMESTAMP,
   tiers: DEMO_TIERS,
-};
+  };
+}
 
 type Resource = { name: string; body: string; priceUsdc: number };
 const RESOURCES: Record<string, Resource> = {
@@ -63,10 +104,56 @@ const RESOURCES: Record<string, Resource> = {
   "expensive-dataset": { name: "expensive-dataset", body: "a large, expensive answer", priceUsdc: 80 },
 };
 
+/**
+ * Append a signed record of what was decided.
+ *
+ * Signed rather than merely logged because an audit record the seller can edit
+ * after the fact is not evidence of anything. Without a key the record is still
+ * written, but marked unsigned, so a missing key is visible rather than silent.
+ */
+async function recordDecision(entry: {
+  path: string;
+  allowed: boolean;
+  decision: SellerDecision;
+  paymentTx?: string | undefined;
+  commitState?: string | undefined;
+}): Promise<void> {
+  const body = {
+    at: new Date().toISOString(),
+    resource: entry.path,
+    allowed: entry.allowed,
+    reason: entry.decision.reason,
+    tier: entry.decision.tier?.name ?? null,
+    elapsedMs: entry.decision.elapsedMs,
+    checks: entry.decision.checks,
+    paymentTx: entry.paymentTx ?? null,
+    commitState: entry.commitState ?? null,
+    seller: SELLER,
+    chain: `eip155:${MONAD_TESTNET.chainId}`,
+  };
+  const line =
+    AUDIT_KEY === undefined
+      ? { ...body, signed: false, reason_unsigned: "SELLER_AUDIT_PRIVATE_KEY is not set" }
+      : { ...body, ...(await signDecision(AUDIT_KEY, body)) };
+
+  mkdirSync(".", { recursive: true });
+  appendFileSync(AUDIT_LOG, `${JSON.stringify(line, (_k, v) => (typeof v === "bigint" ? v.toString() : v))}\n`);
+}
+
 const server = createServer(async (req, res) => {
   if (req.method === "GET" && req.url === "/health") {
     res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify({ ok: true, commitFeed: commitIndex.connected, facilitator: X402.facilitator }));
+    res.end(
+      JSON.stringify({
+        ok: true,
+        commitFeed: feed.connected,
+        heads: feed.status().heads,
+        finalFloor: feed.status().finalFloor,
+        facilitator: X402.facilitator,
+        auditLog: AUDIT_LOG,
+        auditSigned: AUDIT_KEY !== undefined,
+      }),
+    );
     return;
   }
 
@@ -77,62 +164,153 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  // In production the Authority Header rides in the x402 request extensions.
-  // Parsed separately so the 402 challenge is emitted before any verification.
+  /**
+   * JSON with bigints rendered as decimal strings.
+   *
+   * `amount` comes off chain as a bigint, and a bare `JSON.stringify` throws on
+   * one, which kills the request handler with no response at all. A dead handler is
+   * the worst possible failure for a component whose job is to answer.
+   */
+  const send = (status: number, body: unknown): void => {
+    res.writeHead(status, { "content-type": "application/json" });
+    res.end(JSON.stringify(body, (_key, value) => (typeof value === "bigint" ? value.toString() : value)));
+  };
+
+  // -- 1. Is there an Authority Header? If not, emit the 402 challenge.
+  //       The header rides in the x402 extensions; it is read from its own header
+  //       here so the challenge is produced before anything is verified.
   const raw = req.headers["x-authority-header"];
   if (typeof raw !== "string" || raw.length === 0) {
     res.writeHead(402, {
       "content-type": "application/json",
       "x-payment-required": JSON.stringify({
-        chain: chainConfig.chainId,
+        chain: MONAD_TESTNET.chainId,
         facilitator: X402.facilitator,
         resource: resource.name,
-        maxAmountRequired: String(Math.round(resource.priceUsdc * 1_000_000)),
+        maxAmountRequired: String(Math.round(resource.priceUsdc * USDC_BASE_UNITS)),
         resourceName: resource.name,
         description: "Answer produced only after authority is verified and finality is reached.",
         mimeType: "application/json",
         payTo: SELLER,
         maxTimeoutSeconds: 60,
-        extra: { name: "authority-header" },
+        extra: { [HEADER_EXTENSION_KEY]: { required: true } },
       }),
     });
     res.end("payment required");
     return;
   }
 
+  // -- 2. Authority. A parse failure, a chain we do not read, a revoked hop or a
+  //       tampered claim are all denials, not errors to shrug off.
   let decision: SellerDecision;
   try {
-    decision = await verifyAuthority(client, JSON.parse(raw) as never, config);
+    decision = await verifyAuthority(client, JSON.parse(raw) as never, configFor(resource.name));
   } catch (error) {
-    res.writeHead(503, { "content-type": "application/json" });
-    res.end(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }));
+    // The stack goes to stderr and not to the client. A 503 body is read by
+    // whoever is probing the seller, and a stack trace tells them the shape of our
+    // internals for nothing.
+    process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);
+    const message = error instanceof Error ? error.message : String(error);
+    send(503, { error: message });
+    // Recorded even though there is no decision object: a 503 is a decision not to
+    // serve, and it is the kind that is easiest to hide.
+    await recordDecision({
+      path: url.pathname,
+      allowed: false,
+      decision: { allowed: false, tier: null, reason: message, elapsedMs: 0, checks: [] },
+    });
     return;
   }
 
   if (!decision.allowed || decision.tier === null) {
-    res.writeHead(403, { "content-type": "application/json" });
-    res.end(JSON.stringify(decision));
+    await recordDecision({ path: url.pathname, allowed: false, decision });
+    send(403, decision);
     return;
   }
 
-  // Release policy. Withhold when the commit state is unknown: a dropped socket
-  // must never become a released resource.
+  // -- 3. Payment. The previous version only checked commit state when an
+  //    `x-payment-tx` header was present and otherwise served the resource, which
+  //    meant an unpaid request got the paid answer. Missing payment now withholds.
   const paymentTx = req.headers["x-payment-tx"];
-  const required = policyFor(resource.priceUsdc).releaseAt;
-  if (typeof paymentTx === "string" && paymentTx.length > 0) {
-    const receipt = await client.getTransactionReceipt({ hash: paymentTx as `0x${string}` });
-    const state = commitIndex.resolve(receipt.blockHash, Number(receipt.blockNumber));
-    if (!mayRelease(state, required)) {
-      res.writeHead(425, { "content-type": "application/json" });
-      res.end(JSON.stringify({ ...decision, withheld: true, observedCommitState: state, requiredCommitState: required }));
-      return;
-    }
+  if (typeof paymentTx !== "string" || paymentTx.length === 0) {
+    await recordDecision({ path: url.pathname, allowed: false, decision });
+    send(425, { ...decision, withheld: true, reason: "no payment transaction supplied" });
+    return;
   }
 
-  res.writeHead(200, { "content-type": "application/json" });
-  res.end(JSON.stringify({ ...decision, resource: resource.body, releasedAt: required }));
+  let paid: { payer: Address; amount: bigint };
+  try {
+    paid = await verifyPayment(client, {
+      paymentHeader: req.headers["x-payment"],
+      settlementTx: paymentTx as Hex,
+      payTo: SELLER,
+      maxAmount: BigInt(Math.round(resource.priceUsdc * USDC_BASE_UNITS)),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await recordDecision({ path: url.pathname, allowed: false, decision, paymentTx });
+    send(402, { ...decision, withheld: true, reason: `payment not verified: ${message}` });
+    return;
+  }
+
+  // -- 4. Finality. Unknown means withhold. A dropped socket must never look
+  //       like "finalized", or a resource is released on a guess.
+  const required = policyFor(resource.priceUsdc).releaseAt;
+  const state = await feed.statusOf(
+    (hash) => client.getTransactionReceipt({ hash: hash as Hex }),
+    paymentTx,
+  );
+  if (!mayRelease(state, required)) {
+    await recordDecision({
+      path: url.pathname,
+      allowed: false,
+      decision,
+      paymentTx,
+      commitState: state ?? "unknown",
+    });
+    send(425, {
+      ...decision,
+      withheld: true,
+      observedCommitState: state,
+      requiredCommitState: required,
+      paidBy: paid.payer,
+      paidAmount: paid.amount.toString(),
+    });
+    return;
+  }
+
+  await recordDecision({
+    path: url.pathname,
+    allowed: true,
+    decision,
+    paymentTx,
+    commitState: state ?? "unknown",
+  });
+  send(200, {
+    ...decision,
+    resource: resource.body,
+    releasedAt: required,
+    paidBy: paid.payer,
+    paidAmount: paid.amount.toString(),
+  });
 });
 
+const USDC_BASE_UNITS = 1_000_000;
+const HEADER_EXTENSION_KEY = "authorityHeader";
+
 server.listen(PORT, () => {
-  process.stdout.write(`mandat seller on :${PORT} chain ${chainConfig.chainId} (${MONAD_TESTNET.name})\n`);
+  process.stdout.write(
+    `mandat seller on :${PORT} chain ${MONAD_TESTNET.chainId} (${MONAD_TESTNET.name})\n` +
+      `  registry        ${REGISTRY}\n` +
+      `  cap enforcer    ${ENFORCER_PERIOD}\n` +
+      `  expiry enforcer ${ENFORCER_TIMESTAMP}\n` +
+      `  payTo           ${SELLER}\n` +
+      `  audit log       ${AUDIT_LOG}${AUDIT_KEY === undefined ? " (UNSIGNED: no key set)" : " (signed)"}\n`,
+  );
+});
+
+process.on("SIGINT", () => {
+  unsubscribe();
+  feed.disconnect();
+  server.close(() => process.exit(0));
 });

@@ -47,6 +47,9 @@ importers:
       '@mandat/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@mandat/three-light':
+        specifier: workspace:*
+        version: link:../three-light
       viem:
         specifier: ^2.21.0
         version: 2.56.9(typescript@5.9.3)

@@ -18,14 +18,31 @@ import {AuthorityRegistry} from "./AuthorityRegistry.sol";
 ///      DTK already checks per-hop revocation, parent linkage and signatures. We do
 ///      not repeat those and we do not present them as ours. See working/constraints.md 4.3.
 contract SkillAuthorityEnforcer is ICaveatEnforcer {
+    /**
+     * @dev Version 2 added `allowedSeller`.
+     *
+     *      Version 1 had no seller anywhere in `terms`, which made the seller's
+     *      scoping check unverifiable: `checkSellerAndExpiry` compared a value
+     *      the client itself asserted against the address being called. That is a
+     *      self-comparison, not a check. With the seller in `terms` the seller
+     *      reads it back out of the delegation and compares that, so a delegation
+     *      minted for one seller cannot be presented to another.
+     *
+     *      Terms are versioned precisely so a change like this does not have to
+     *      reinterpret delegations that are already live: a v1 delegation is
+     *      rejected by `UnsupportedTermsVersion` rather than read as a v2 with an
+     *      unset seller.
+     */
     struct Terms {
         uint8 version;
         uint8 checks;
         bytes32 manifestHash;
         bytes32 parentDelegationHash;
+        /** Zero means "any seller". Compared, never assumed. */
+        address allowedSeller;
     }
 
-    uint8 public constant TERMS_VERSION = 1;
+    uint8 public constant TERMS_VERSION = 2;
 
     uint8 public constant CHECK_MANIFEST = 0x01;
     uint8 public constant CHECK_GRAPH = 0x02;
@@ -35,6 +52,7 @@ contract SkillAuthorityEnforcer is ICaveatEnforcer {
     AuthorityRegistry public immutable REGISTRY;
 
     error UnsupportedTermsVersion(uint8 version);
+    error SellerNotAllowed(address allowedSeller, address actual);
     error UnknownCheck(uint8 checks);
     error ManifestNotLive(bytes32 manifestHash);
     error ParentNotRegistered(bytes32 parentDelegationHash);
@@ -115,13 +133,51 @@ contract SkillAuthorityEnforcer is ICaveatEnforcer {
         if (t.checks & CHECK_IDENTITY != 0 && REGISTRY.agentIdOf(redeemer) == 0) {
             revert RedeemerHasNoIdentity(redeemer);
         }
+
+        // Seller scoping, always on in v2 rather than behind a bit. A zero seller
+        // means "any seller", which is how an agent's own delegation, minted for
+        // general use, stays usable; anything else is exclusive to that address.
+        //
+        // The seller is not msg.sender: a redemption is executed by the
+        // DelegationManager on behalf of the root delegator, so the account that
+        // ends up receiving a payment is not this one either. This check exists so
+        // the *seller* can read the scope out of `terms` and refuse a request
+        // from a delegation minted for someone else. On-chain it is a policy
+        // statement, not an enforcement of who gets paid.
+        //
+        // That limitation is deliberate and stated in working/architecture.md 4.1:
+        // `ICaveatEnforcer` receives no parent delegation and no calldata target
+        // it can attribute a payment to, so "this delegation may only spend at
+        // seller X" is not expressible here.
     }
 
-    /// @dev abi.encode of a static struct is always 4 words, whatever the field types.
+    /// @notice The seller this delegation is scoped to, or zero for any seller.
+    /// @dev A view so a seller can answer the question with one eth_call instead
+    ///      of reading `terms` itself. Kept separate from `beforeHook` because a
+    ///      hook reverts by contract and this must be able to say "not scoped to
+    ///      me" without reverting the redemption.
+    function allowedSellerOf(bytes calldata terms) external pure returns (address) {
+        Terms memory t = _decode(terms);
+        if (t.version != TERMS_VERSION) revert UnsupportedTermsVersion(t.version);
+        return t.allowedSeller;
+    }
+
+    /**
+     * @dev abi.encode of a static struct is one 32-byte word per field, whatever
+     *      the field types: `uint8` is padded, not packed. Five fields, so 160
+     *      bytes for v2.
+     *
+     *      The length is asserted before decoding because `abi.decode` on a short
+     *      blob reverts without saying which field was short, and the exact byte
+     *      count is what a caller needs to know.
+     */
     function _decode(bytes calldata terms) private pure returns (Terms memory) {
-        if (terms.length != 128) revert MalformedTerms();
+        if (terms.length != TERMS_LENGTH) revert MalformedTerms();
         return abi.decode(terms, (Terms));
     }
+
+    /// @notice Byte length of encoded terms: one word per struct field.
+    uint256 public constant TERMS_LENGTH = 160;
 
     /* ------------------------------------------------------------------ */
     /* Hooks we do not use                                                  */

@@ -10,6 +10,7 @@
  */
 
 import type { Address, Hex } from "viem";
+import { ZERO_ADDRESS } from "./terms.js";
 import type { Delegation } from "./chain.js";
 
 export const HEADER_VERSION = 1;
@@ -20,6 +21,17 @@ export const HEADER_EXTENSION_KEY = "authorityHeader";
 export type AuthorityClaims = {
   /** Raw base-unit amount, as a decimal string. Never a JS number. */
   maxPerPeriod: string;
+  /**
+   * Token `maxPerPeriod` is denominated in, taken from the caveat terms.
+   *
+   * Not optional, and not a convenience. Base units mean nothing without the token:
+   * 5e17 of WMON and 5e17 of USDC differ by twelve orders of magnitude, and a
+   * seller that compared a WMON cap against a USDC price would read a 0.5 WMON
+   * budget as "plenty" and sell against it. That is the same class of error as
+   * comparing a price in cents to one in wei, and it would have gone unnoticed
+   * because both numbers are large.
+   */
+  capToken: Address;
   periodSeconds: number;
   allowedSeller: Address;
   expiry: number;
@@ -63,6 +75,13 @@ export function compareClaims(
       message: `claimed ${header.claims.maxPerPeriod}, recomputed ${computed.maxPerPeriod}`,
     };
   }
+  if (header.claims.capToken.toLowerCase() !== computed.capToken.toLowerCase()) {
+    return {
+      kind: "claimsMismatch",
+      field: "capToken",
+      message: `cap token differs: header says ${header.claims.capToken}, delegation says ${computed.capToken}`,
+    };
+  }
   if (header.claims.periodSeconds !== computed.periodSeconds) {
     return {
       kind: "claimsMismatch",
@@ -87,12 +106,22 @@ export function compareClaims(
   return null;
 }
 
+/**
+ * Scope and expiry, both recomputed rather than asserted.
+ *
+ * `allowedSeller` of the zero address means the delegation is not scoped to any
+ * one seller, which is how a general-purpose agent delegation stays usable. It
+ * was compared literally before, so an unscoped delegation was refused by every
+ * seller, including the one it was minted for: the wildcard meant "denied"
+ * instead of "any".
+ */
 export function checkSellerAndExpiry(
   header: AuthorityHeader,
   seller: Address,
   now: number,
 ): HeaderProblem | null {
-  if (header.claims.allowedSeller.toLowerCase() !== seller.toLowerCase()) {
+  const scoped = header.claims.allowedSeller.toLowerCase() !== ZERO_ADDRESS;
+  if (scoped && header.claims.allowedSeller.toLowerCase() !== seller.toLowerCase()) {
     return {
       kind: "wrongSeller",
       message: "this delegation is not scoped to the seller being called",
@@ -120,6 +149,7 @@ export function authorityToolResult(header: AuthorityHeader) {
   return {
     chain: header.chain,
     maxPerPeriod: header.claims.maxPerPeriod,
+    capToken: header.claims.capToken,
     periodSeconds: header.claims.periodSeconds,
     allowedSeller: header.claims.allowedSeller,
     expiry: header.claims.expiry,

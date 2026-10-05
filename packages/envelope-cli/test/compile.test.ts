@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { compileEnvelope, serialiseForChainTest, type EnforcerAddresses } from "../src/compile.js";
 import { ManifestError } from "../src/manifest.js";
+import { ZERO_ADDRESS, decodeTerms } from "@mandat/protocol";
 import type { Permissions } from "../src/manifest.js";
 import type { Address } from "viem";
 
@@ -77,10 +78,22 @@ describe("compileEnvelope", () => {
     expect(out.summary.maxCalls).toBeNull();
   });
 
-  it("encodes terms as 128 bytes for our own enforcer", () => {
+  it("encodes terms as 160 bytes for our own enforcer", () => {
     const out = compile();
-    expect(out.terms.length).toBe(2 + 2 * 128);
+    expect(out.terms.length).toBe(2 + 2 * 160);
     expect(out.caveats.at(-1)?.terms).toBe(out.terms);
+  });
+
+  it("carries the seller scope into the terms, so it is readable off chain", () => {
+    const seller = "0x4444444444444444444444444444444444444444" as const;
+    const out = compile({ allowedSeller: seller });
+    expect(out.summary.allowedSeller).toBe(seller);
+    expect(decodeTerms(out.terms).allowedSeller).toBe(seller);
+  });
+
+  it("leaves the seller unscoped by default, so a general delegation stays usable", () => {
+    expect(compile().summary.allowedSeller).toBe(ZERO_ADDRESS);
+    expect(decodeTerms(compile().terms).allowedSeller).toBe(ZERO_ADDRESS);
   });
 
   it("computes the expiry from now, not from wall-clock time", () => {

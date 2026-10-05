@@ -19,7 +19,8 @@
   },
   "dependencies": {
     "@mandat/protocol": "workspace:*",
-    "viem": "^2.21.0"
+    "viem": "^2.21.0",
+    "@mandat/three-light": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",

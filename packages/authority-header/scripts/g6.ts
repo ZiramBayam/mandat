@@ -115,12 +115,34 @@ const publicClient = createPublicClient({ transport: http(MONAD_TESTNET.rpc) });
  * `writeContract` on a wallet client is typed only for ABIs it can resolve, and a
  * raw pair is what `redeem.ts` produces, so this skips the ABI layer entirely.
  */
+/**
+ * Fee bounds, stated rather than estimated.
+ *
+ * `sendTransaction` without them asks the node for a suggested price, and on this
+ * endpoint that came back high enough that a 0.34 MON account reported "insufficient
+ * balance" for a transaction that costs about 0.00005 MON. A redemption that
+ * cannot be sent is not a redemption, and the fee is our choice to make.
+ *
+ * Both figures are far above the observed 0.1 gwei base fee and below anything
+ * that would make a 0.3 MON balance look small.
+ */
+const MAX_FEE_PER_GAS = 20_000_000_000n; // 20 gwei
+const MAX_PRIORITY_FEE = 1_000_000_000n; // 1 gwei
+const REDEEM_GAS_LIMIT = 900_000n;
+
 async function submitTransaction(
   account: ReturnType<typeof privateKeyToAccount>,
   tx: { to: Address; data: Hex },
 ): Promise<Hex> {
   const client = createWalletClient({ account, chain: CHAIN, transport: http(MONAD_TESTNET.rpc) });
-  return client.sendTransaction({ to: tx.to, data: tx.data, chain: CHAIN });
+  return client.sendTransaction({
+    to: tx.to,
+    data: tx.data,
+    chain: CHAIN,
+    gas: REDEEM_GAS_LIMIT,
+    maxFeePerGas: MAX_FEE_PER_GAS,
+    maxPriorityFeePerGas: MAX_PRIORITY_FEE,
+  });
 }
 
 const deployer = privateKeyToAccount(needKey("DEPLOYER_PRIVATE_KEY"));

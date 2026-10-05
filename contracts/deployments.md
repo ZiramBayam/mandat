@@ -13,8 +13,11 @@ pair is kept in git history, not here: nothing live depended on it.
 
 | Contract | Address | Deploy tx |
 |---|---|---|
-| `AuthorityRegistry` | `0xE8F8d9f1AF1cc0b0bB1DB2ccC74851Bed23cbb00` | `0x1c2d9d11cab05366572dbcb1bdd5fefb54de53f169de6ea5fddcf226368fba73` |
-| `SkillAuthorityEnforcer` | `0x38D2d3e21087C25E83CEEcFa7FAdF0D0197b9ec9` | `0x247efd47f074d8e5fd4766bf95ad5a463b151499bb9db551ddff06f5506937e9` |
+| `AuthorityRegistry` | `0xb51807EC9C8090c155E80B085ebdD999CCf68D30` | `0x1c2d9d11cab05366572dbcb1bdd5fefb54de53f169de6ea5fddcf226368fba73` |
+| `SkillAuthorityEnforcer` | `0x5c6EE4586ACABcb6326069c229E58091B21ef384` | `0x247efd47f074d8e5fd4766bf95ad5a463b151499bb9db551ddff06f5506937e9` |
+
+Re-deployed a third time on 5 Okt 2026 after terms v2 added `allowedSeller`, so
+the addresses above are the current ones. Earlier pairs are in git history.
 
 Verified after deployment, read via `eth_call`:
 
@@ -22,8 +25,9 @@ Verified after deployment, read via `eth_call`:
 AuthorityRegistry.DELEGATION_MANAGER() = 0xdb9B1e94B5b69Df7e401DDbedE43491141047dB3
 AuthorityRegistry.ROOT_AUTHORITY()     = 0xffff...ffff
 AuthorityRegistry.ERC8004_IDENTITY()   = 0x0000...0000   (expected: none on testnet)
-SkillAuthorityEnforcer.REGISTRY()      = 0xE8F8d9f1AF1cc0b0bB1DB2ccC74851Bed23cbb00
-SkillAuthorityEnforcer.TERMS_VERSION() = 1
+SkillAuthorityEnforcer.REGISTRY()      = 0xb51807EC9C8090c155E80B085ebdD999CCf68D30
+SkillAuthorityEnforcer.TERMS_VERSION() = 2
+SkillAuthorityEnforcer.TERMS_LENGTH()  = 160
 SkillAuthorityEnforcer.CHECK_MASK()    = 7
 ```
 
@@ -75,6 +79,23 @@ addresses cannot be derived.
 
 Parity is asserted in `test/CaveatEnforcerParity.t.sol` by decoding identical
 terms through the live enforcer and through ours, not by comparing bytecode.
+
+## Seller decisions, measured
+
+`packages/authority-header/scripts/seller-check.ts` starts the seller and drives
+it, so the figures come from the running process rather than from a log line.
+
+| Request | Result |
+|---|---|
+| No Authority Header | `402` with the x402 challenge |
+| Cap inflated in the header | `403`, "claimed 800000000, recomputed 50000000" |
+| Registered delegation, cheap tier, no payment | `425` withheld. **Previously `200`, the paid answer** |
+| Registered delegation, expensive tier | `403`, "costs 800000000000000000 … above the cap of 500000000000000000" |
+| Wrong chain | `403`, before any RPC |
+| Latency, 5 warm runs | 133, 159, 205, 159, 179 ms. Worst **205 ms** against a 1000 ms budget |
+
+The audit log held 10 signed records, with `auditHash` and `signature` present and
+at least one denial among them.
 
 ## G6 — the two transactions the project exists to produce
 
