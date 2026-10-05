@@ -31,7 +31,11 @@ export class CommitFeed {
   #socket: WebSocket | null = null;
   #lastState: CommitState | null = null;
   #onStatus: (() => void) | null = null;
-  #onHead: ((head: Head) => void) | null = null;
+  // A Set, not a single callback: a second subscribe() used to silently replace
+  // the first, so a caller could watch heads, be handed an unsubscribe for a
+  // listener that no longer existed, and never learn that its own observer had
+  // been dropped. One socket with several observers is the normal case.
+  readonly #onHead = new Set<(head: Head) => void>();
 
   constructor(private readonly chain: MonadChain = MONAD_TESTNET) {}
 
@@ -58,13 +62,16 @@ export class CommitFeed {
       const head = this.#index.ingest(parsed.params.result);
       if (head !== null) {
         this.#lastState = head.commitState;
-        this.#onHead?.({
+        const parsed: Head = {
           commitState: head.commitState,
           // The payload carries `number` and `hash` as hex strings; parse the
           // number once here so consumers do not each re-derive it.
           blockNumber: Number.parseInt(head.number, 16),
           blockHash: head.hash,
-        });
+        };
+        // Copied first: an observer is allowed to unsubscribe from inside the
+        // callback, which mutates the set while it is being iterated.
+        for (const observer of [...this.#onHead]) observer(parsed);
         this.#onStatus?.();
       }
     });
@@ -93,9 +100,9 @@ export class CommitFeed {
    * Returns an unsubscribe function, because the socket outlives most callers.
    */
   subscribe(onHead: (head: Head) => void): () => void {
-    this.#onHead = onHead;
+    this.#onHead.add(onHead);
     return () => {
-      if (this.#onHead === onHead) this.#onHead = null;
+      this.#onHead.delete(onHead);
     };
   }
 

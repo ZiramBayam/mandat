@@ -14,7 +14,8 @@
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "setup": "tsx scripts/setup.ts"
+    "setup": "tsx scripts/setup.ts",
+    "watch": "tsx scripts/watch.ts"
   },
   "dependencies": {
     "@mandat/protocol": "workspace:*",

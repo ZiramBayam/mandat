@@ -166,6 +166,59 @@ describe("CommitFeed", () => {
   });
 
   /**
+   * Two subscribers on one socket. This regressed before: the feed held a single
+   * callback, so a second subscribe() silently replaced the first and the first
+   * caller kept an unsubscribe function for an observer that no longer existed.
+   */
+  it("delivers to every subscriber, and one unsubscribe leaves the other running", () => {
+    const { original } = installFakeSocket();
+    try {
+      const feed = new CommitFeed();
+      feed.connect();
+      FakeSocket.last!.open();
+
+      const first: string[] = [];
+      const second: string[] = [];
+      const stopFirst = feed.subscribe((h) => first.push(h.commitState));
+      feed.subscribe((h) => second.push(h.commitState));
+
+      FakeSocket.last!.deliver(head(1, "Proposed"));
+      expect(first).toEqual(["Proposed"]);
+      expect(second).toEqual(["Proposed"]);
+
+      stopFirst();
+      FakeSocket.last!.deliver(head(2, "Voted"));
+      expect(first).toEqual(["Proposed"]);
+      expect(second).toEqual(["Proposed", "Voted"]);
+      feed.disconnect();
+    } finally {
+      (globalThis as { WebSocket: unknown }).WebSocket = original;
+    }
+  });
+
+  it("survives an observer unsubscribing from inside its own callback", () => {
+    const { original } = installFakeSocket();
+    try {
+      const feed = new CommitFeed();
+      feed.connect();
+      FakeSocket.last!.open();
+
+      const other: string[] = [];
+      feed.subscribe((h) => other.push(h.commitState));
+      const stop = feed.subscribe(() => stop());
+      feed.subscribe((h) => other.push(h.commitState));
+
+      // The self-removing observer sees head 1 only. Both survivors see both.
+      FakeSocket.last!.deliver(head(1, "Proposed"));
+      FakeSocket.last!.deliver(head(2, "Voted"));
+      expect(other).toEqual(["Proposed", "Proposed", "Voted", "Voted"]);
+      feed.disconnect();
+    } finally {
+      (globalThis as { WebSocket: unknown }).WebSocket = original;
+    }
+  });
+
+  /**
    * `statusOf` is how a payment's finality is resolved, and it returns null when
    * the state is unknown. That null is load-bearing: callers must treat it as
    * withhold, which is the difference between a safe and an unsafe seller.

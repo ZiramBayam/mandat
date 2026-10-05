@@ -147,15 +147,46 @@ export function inspectChain(chain: readonly Delegation[], caller: Address): Cha
   return null;
 }
 
-/** Walk parentHash upward to answer "who authorised this, through whom". */
+/** What a caller needs beyond the rows, so an incomplete answer is never mistaken for a complete one. */
+export type LineageResult = {
+  /** Root first, leaf last. Empty when the leaf is not in the graph. */
+  chain: AuthorityMeta[];
+  /**
+   * True when the walk stopped because it hit `maxDepth` rather than a root.
+   *
+   * A truncated chain is dangerous in this specific context: it looks like a short
+   * authority path, and a reader would report it as "human, then agent" when the
+   * real answer has more hops above.
+   */
+  truncated: boolean;
+};
+
+/**
+ * Walk parentHash upward to answer "who authorised this, through whom".
+ *
+ * Two things the previous version got wrong, both silent:
+ *
+ *  - It stopped on a zero `parentHash`. A root delegation stores ROOT_AUTHORITY
+ *    there, not zero, so the walk read `authorities(ROOT_AUTHORITY)`, got an
+ *    all-zero tuple back, pushed that as a real hop, and stopped on the next
+ *    round. The result ended with a fabricated entry for a delegation that does not
+ *    exist.
+ *
+ *  - It tested `meta === undefined`. `readContract` on a missing mapping key
+ *    returns a zeroed tuple, never undefined, so the walk had no early exit at all.
+ *
+ * Both are why this had no callers: the output looked plausible and was wrong.
+ */
 export async function buildLineage(
   registry: { readContract: (args: { address: Address; abi: Abi; functionName: string; args: readonly unknown[] }) => Promise<unknown> },
   registryAddress: Address,
   leafHash: Hex,
-  maxDepth = 8,
-): Promise<AuthorityMeta[]> {
+  maxDepth = 16,
+  rootAuthority: Hex = DTK_CONSTANTS.ROOT_AUTHORITY,
+): Promise<LineageResult> {
   const out: AuthorityMeta[] = [];
   let cursor: Hex | undefined = leafHash;
+
   for (let depth = 0; depth < maxDepth && cursor !== undefined; depth += 1) {
     const meta = (await registry.readContract({
       address: registryAddress,
@@ -163,11 +194,32 @@ export async function buildLineage(
       functionName: "authorities",
       args: [cursor],
     })) as AuthorityMeta | undefined;
-    if (meta === undefined) break;
+
+    // A missing row reads as all zeroes, so test the field the contract uses to
+    // decide a row exists rather than testing the tuple.
+    if (meta === undefined || isZeroAddress(meta.delegator)) break;
+
     out.push(meta);
-    cursor = meta.parentHash === ZERO_HASH ? undefined : meta.parentHash;
+
+    // ROOT_AUTHORITY is the end of the chain, not another delegation to look up.
+    if (meta.parentHash === rootAuthority) {
+      cursor = undefined;
+      break;
+    }
+    if (meta.parentHash === ZERO_HASH) {
+      // A root with a zero parent is a registry written by something that is not
+      // ours. Stop rather than follow it, and let the caller see a short chain.
+      cursor = undefined;
+      break;
+    }
+    cursor = meta.parentHash;
   }
-  return out.reverse();
+
+  return { chain: out.reverse(), truncated: cursor !== undefined };
+}
+
+function isZeroAddress(value: Address): boolean {
+  return /^0x0{40}$/i.test(value);
 }
 
 const ZERO_HASH = `0x${"0".repeat(64)}` as Hex;
