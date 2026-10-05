@@ -256,7 +256,62 @@ export async function verifyAuthority(
   checks.push({ name: "scope", ok: scope === null, detail: scope?.message ?? "scoped to this seller and unexpired" });
   if (scope !== null) return fail(scope.message);
 
-  // 3. Chain state. Batched because the public testnet endpoint rate-limits
+  // 3. Tier decision, gated by the recomputed cap.
+  //
+  //    Offline, and deliberately so. Both inputs are in hand by this point: the cap
+  //    comes from the caveats, the price from the seller's own config. Asking the
+  //    chain first made the answer depend on a delegation being registered, so a
+  //    client asking for a tier it cannot afford got "not in the authority graph"
+  //    instead of "above the cap", and the tests for the pricing rule only passed
+  //    when the public endpoint was rate-limited enough to skip them.
+  //
+  //    The cap and the price must be in the same token. A 0.5 WMON cap read as a
+  //    number is 5e17, which dwarfs 80 USDC at 8e7, so a seller that compared them
+  //    without checking would serve the most expensive tier against a budget that
+  //    cannot cover it. It happened once during development and the symptom was a
+  //    sensible-looking answer.
+  //
+  //    The tier asked for must itself be affordable. Substituting a cheaper one
+  //    would let a client request the premium resource and receive the discount
+  //    one at the discount price, with nothing in the response to say so.
+  const capToken = computed.capToken.toLowerCase();
+  const requested = config.tiers.find((t) => t.name === config.requestedTier);
+  if (requested === undefined) {
+    return {
+      allowed: false,
+      tier: null,
+      reason: `no tier named ${config.requestedTier}; refusing to substitute another for it`,
+      elapsedMs: Date.now() - started,
+      checks,
+    };
+  }
+
+  if (requested.token.toLowerCase() !== capToken) {
+    return {
+      allowed: false,
+      tier: null,
+      reason:
+        `${requested.name} is priced in ${requested.token} but the cap is denominated in ` +
+        `${computed.capToken}; refusing to compare base units across tokens`,
+      elapsedMs: Date.now() - started,
+      checks,
+    };
+  }
+
+  const cap = BigInt(computed.maxPerPeriod);
+  if (requested.price > cap) {
+    return {
+      allowed: false,
+      tier: null,
+      reason:
+        `${requested.name} costs ${requested.price} base units of ${requested.token}, ` +
+        `above the cap of ${computed.maxPerPeriod}`,
+      elapsedMs: Date.now() - started,
+      checks,
+    };
+  }
+
+  // 4. Chain state. Batched because the public testnet endpoint rate-limits
   //    eth_call to 25 rps, so batching is required, not an optimisation.
 
   const [disabled, registered, live, manifestOk, agentId, recordedCid] = await Promise.all([
@@ -307,53 +362,6 @@ export async function verifyAuthority(
   checks.push({ name: "identity", ok: agentId > 0n, detail: `agentId ${agentId.toString()}` });
   if (agentId === 0n) return fail("redeemer has no ERC-8004 identity");
 
-  // 4. Tier decision, gated by the on-chain cap.
-  //
-  //    The cap and the price must be in the same token. A 0.5 WMON cap read as a
-  //    number is 5e17, which dwarfs 80 USDC at 8e7, so a seller that compared them
-  //    without checking would serve the most expensive tier against a budget that
-  //    cannot cover it. It happened once during development and the symptom was a
-  //    sensible-looking answer.
-  //
-  //    The tier asked for must itself be affordable. Substituting a cheaper one
-  //    would let a client request the premium resource and receive the discount
-  //    one at the discount price, with nothing in the response to say so.
-  const capToken = computed.capToken.toLowerCase();
-  const requested = config.tiers.find((t) => t.name === config.requestedTier);
-  if (requested === undefined) {
-    return {
-      allowed: false,
-      tier: null,
-      reason: `no tier named ${config.requestedTier}; refusing to substitute another for it`,
-      elapsedMs: Date.now() - started,
-      checks,
-    };
-  }
-
-  if (requested.token.toLowerCase() !== capToken) {
-    return {
-      allowed: false,
-      tier: null,
-      reason:
-        `${requested.name} is priced in ${requested.token} but the cap is denominated in ` +
-        `${computed.capToken}; refusing to compare base units across tokens`,
-      elapsedMs: Date.now() - started,
-      checks,
-    };
-  }
-
-  const cap = BigInt(computed.maxPerPeriod);
-  if (requested.price > cap) {
-    return {
-      allowed: false,
-      tier: null,
-      reason:
-        `${requested.name} costs ${requested.price} base units of ${requested.token}, ` +
-        `above the cap of ${computed.maxPerPeriod}`,
-      elapsedMs: Date.now() - started,
-      checks,
-    };
-  }
   const tier = requested;
   return {
     allowed: true,

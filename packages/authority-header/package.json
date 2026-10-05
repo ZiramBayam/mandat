@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "start:seller": "tsx src/seller/main.ts",
-    "g6": "tsx scripts/g6.ts"
+    "g6": "tsx scripts/g6.ts",
+    "explorer": "tsx scripts/explorer.ts"
   },
   "dependencies": {
     "@mandat/protocol": "workspace:*",

@@ -241,6 +241,17 @@ export const authorityRegistryAbi = [
   },
   { type: "function", name: "isLive", stateMutability: "view", inputs: [{ name: "delegationHash", type: "bytes32" }], outputs: [{ name: "", type: "bool" }] },
   { type: "function", name: "isRegistered", stateMutability: "view", inputs: [{ name: "delegationHash", type: "bytes32" }], outputs: [{ name: "", type: "bool" }] },
+  {
+    // The public mapping getter. Absent from this ABI until the explorer needed
+    // it: buildLineage carried its own private copy of the shape, and two copies of
+    // one tuple is exactly how a reader ends up with an ABI that cannot decode its
+    // own registry.
+    type: "function",
+    name: "authorities",
+    stateMutability: "view",
+    inputs: [{ name: "delegationHash", type: "bytes32" }],
+    outputs: [{ name: "", type: "tuple", components: authorityMetaTuple }],
+  },
   { type: "function", name: "lineage", stateMutability: "view", inputs: [{ name: "delegationHash", type: "bytes32" }], outputs: [{ name: "", type: "tuple[]", components: authorityMetaTuple }] },
   { type: "function", name: "manifestCid", stateMutability: "view", inputs: [{ name: "manifestHash", type: "bytes32" }], outputs: [{ name: "", type: "string" }] },
   { type: "function", name: "agentIdOf", stateMutability: "view", inputs: [{ name: "agent", type: "address" }], outputs: [{ name: "", type: "uint256" }] },
@@ -267,3 +278,5 @@ export const identityRegistryAbi = [
     ],
   },
 ] as const satisfies Abi;
+
+export { authorityMetaTuple };

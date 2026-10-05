@@ -9,7 +9,7 @@
  */
 
 import { type Abi, type Address, type Hex, decodeAbiParameters, encodeAbiParameters, keccak256, concat, toHex } from "viem";
-import { delegationManagerAbi, erc1271Abi, ERC1271_MAGIC_VALUE } from "./abi.js";
+import { authorityRegistryAbi, delegationManagerAbi, erc1271Abi, ERC1271_MAGIC_VALUE } from "./abi.js";
 import { DTK_CONSTANTS } from "./addresses.js";
 
 export type Caveat = { enforcer: Address; terms: Hex; args: Hex };
@@ -190,7 +190,7 @@ export async function buildLineage(
   for (let depth = 0; depth < maxDepth && cursor !== undefined; depth += 1) {
     const meta = (await registry.readContract({
       address: registryAddress,
-      abi: AUTHORITY_META_READ_ABI,
+      abi: authorityRegistryAbi,
       functionName: "authorities",
       args: [cursor],
     })) as AuthorityMeta | undefined;
@@ -223,29 +223,5 @@ function isZeroAddress(value: Address): boolean {
 }
 
 const ZERO_HASH = `0x${"0".repeat(64)}` as Hex;
-
-const AUTHORITY_META_READ_ABI = [
-  {
-    type: "function",
-    name: "authorities",
-    stateMutability: "view",
-    inputs: [{ name: "", type: "bytes32" }],
-    outputs: [
-      {
-        name: "",
-        type: "tuple",
-        components: [
-          { name: "delegator", type: "address" },
-          { name: "delegate", type: "address" },
-          { name: "agentId", type: "uint256" },
-          { name: "parentHash", type: "bytes32" },
-          { name: "manifestHash", type: "bytes32" },
-          { name: "createdAt", type: "uint64" },
-          { name: "revokedAt", type: "uint64" },
-        ],
-      },
-    ],
-  },
-] as const satisfies Abi;
 
 export { decodeAbiParameters, delegationManagerAbi, erc1271Abi, ERC1271_MAGIC_VALUE };

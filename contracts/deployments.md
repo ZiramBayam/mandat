@@ -176,6 +176,40 @@ to it. What we enforce is `revokedAt` in `AuthorityRegistry`, read by our own
 enforcer. A delegator can additionally call DTK's `disableDelegation` directly;
 we do not, and the README should not imply the two are the same mechanism.
 
+## G9 — revoking a parent kills the subtree
+
+`pnpm --filter @mandat/authority-header explorer scene` registers a two-hop chain,
+revokes the parent, and checks the child. Three runs, all holding:
+
+| Run | parent hash | child hash | revoke tx | result |
+|---|---|---|---|---|
+| 1 | `0xe4867eed…a45` | `0x95092a50…e7` | `0x16f489da…c7` | child `isLive false` |
+| 2 | `0x9d7849af…2e` | `0x045af0b4…294` | `0xc56397c8…6f3` | child `isLive false` |
+| 3 | `0x34da4847…17` | `0xc9b2b267…ed8` | `0x5ef13520…286` | child `isLive false` |
+
+Full hashes for run 3: parent `0x34da48477a5bc5f23904db35513b33f9a2511801de815615c0ab515030da0317`,
+child `0xc9b2b26724e4e55a12d06d70dbc4d8234cee1e2d187055996083a0d49c271ed8`,
+revoke `0x5ef13520aa5f80d1e6413d068ea82d5e9ac7e0d869066ec50d4418ca07d88286`.
+Registration txs for the same run: `0x8988189639c80ce52bf86faef348aa2b7c3c3a7a8081da6d4ea7a2a7924e058f`
+and `0x52b061bcaf883fc8153a88dcb70279a027c046acc6a4fd17a96b6c29b0a7a445`.
+
+In every run, after the parent's revoke: `isRegistered` stayed `true` on both
+rows, `isLive` was `false` on both, redeeming the two-hop chain reverted, and the
+root's WMON balance did not move.
+
+**Why the scene builds its own chain.** The delegations `g6.ts` registers are one
+hop deep, so `_revokeSubtree` had nothing to recurse into and "it recurses" was an
+argument rather than evidence. The scene registers a child under a fresh parent
+and checks it. Grant authority and revoke authority sit with different parties
+here — the parent is signed ERC-1271 by the root `MultiSigDeleGator`, the child by
+the agent EOA — so the revocation has to reach across into a row it did not sign.
+
+**Costs, measured.** Base fee was 100 gwei and the node's suggested max fee 122
+gwei on 5 Oct 2026. Registration uses about 261k–278k gas, the revoke 900k (the
+cap), so one `scene` run costs roughly 0.15 MON. All three demo accounts are now
+below that, so `scene` will refuse until one is funded; it says so with the
+balances rather than failing partway.
+
 ## Monad mainnet, chain 143
 
 Not deployed. No MON budget, and gate G13 in `working/plan.md` §2 puts it after
