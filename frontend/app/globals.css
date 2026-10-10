@@ -1,0 +1,19 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   globals.css — Entry point.
+
+   The animation layer came from a credited third-party site (see README). The
+   partials kept are the ones the chrome still uses: base tokens, the navbar, the
+   cursor bubble, and the scribble page transition.
+
+   Dropped, because the components that used them are gone:
+     hero, motion-cards, showreel, cards, marquee, footer, vimeo-hero
+───────────────────────────────────────────────────────────────────────────── */
+
+@import './styles/base.css';
+/* Fonts, CSS variables, reset, body/html  */
+@import './styles/navbar.css';
+/* Navbar, logo, header                    */
+@import './styles/cursor.css';
+/* Custom cursor bubble + scribble overlay  */
+@import './styles/responsive.css';
+/* All media queries (tablet + mobile)      */

@@ -3,6 +3,9 @@ node_modules/
 .pnpm-store/
 frontend/dist/
 frontend/.vite/
+frontend/.next/
+frontend/next-env.d.ts
+frontend/tsconfig.tsbuildinfo
 
 # Foundry. contracts/lib/ SENGAJA tidak ada di sini.
 # Ia submodule yang harus di-commit, kalau tidak `forge build`
