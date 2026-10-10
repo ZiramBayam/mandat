@@ -57,7 +57,7 @@ declare module 'react' {
     interface IntrinsicElements extends ThreeElements {}
   }
 }
-import { COMMIT_STATES, clearLamps, rig, setReached } from './rig.js';
+import { COMMIT_STATES, clearLamps, rig, setReached } from './rig';
 
 const DIM = new THREE.Color('#1b2430');
 const LIT: readonly string[] = ['#4a5568', '#8a6d1f', '#1f6f4a', '#2b7fd4'];

@@ -8,8 +8,8 @@ export {
   COMMIT_STATES,
   type Lamp,
   type Rig,
-} from './rig.js';
+} from './rig';
 
-export { SmoothScroll } from './smoothScroll.js';
-export { CommitLamps, LampsFallback } from './CommitLamps.js';
-export { MONAD_TESTNET_CHAIN, MONAD_MAINNET_CHAIN, viemChain } from '../chain/viemChain.js';
+export { SmoothScroll } from './smoothScroll';
+export { CommitLamps, LampsFallback } from './CommitLamps';
+export { MONAD_TESTNET_CHAIN, MONAD_MAINNET_CHAIN, viemChain } from '../chain/viemChain';

@@ -17,7 +17,7 @@
 
 import SvgSymbols from '@/components/SvgSymbols';
 import Navbar from '@/components/Navbar';
-import SmoothScroll from '@/components/SmoothScroll';
+import { SmoothScroll } from '@/lib/motion';
 import CursorBubble from '@/components/CursorBubble';
 import TransitionScribble from '@/components/TransitionScribble';
 

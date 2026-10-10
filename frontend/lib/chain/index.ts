@@ -9,11 +9,10 @@ export {
   readTxOutcome,
   readTokenBalance,
   publicClient,
-  useMemoizedClient,
   type Async,
   type DelegationState,
   type Lineage,
-} from './registry.js';
+} from './registry';
 
 export {
   useCommitFeed,
@@ -21,4 +20,4 @@ export {
   getSharedFeed,
   type CommitFeedState,
   type CommitState,
-} from './commitFeed.js';
+} from './commitFeed';

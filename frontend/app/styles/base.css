@@ -11,21 +11,53 @@
     font-weight: 100 900;
 }
 
-/* ─── Design Tokens ─────────────────────────────────────────────────────────── */
+/* ─── Design Tokens ─────────────────────────────────────────────────────────────
+   Dark, restrained, infrastructure. The source site was a creative agency:
+   warm creams, pinks, oranges. Those names are kept so the surviving navbar and
+   cursor rules keep working, but the values below are ours -- only the meaning
+   "this is the accent" changes.
+
+   --commit-* is a separate set because the four commit states must not be
+   distinguished by hue alone. Each pairs a colour with a distinct marker shape in
+   scenes.css, so the sequence is readable without colour vision.
+────────────────────────────────────────────────────────────────────────────── */
 :root {
-    --color-green: #29725f;
-    --color-lightblue: #82a0ff;
-    --color-darkblue: #4b69f0;
-    --color-lightgreen: #e6fab9;
-    --color-orange: #f5693c;
-    --color-maroon: #a0325a;
-    --color-pink: #f0befa;
-    --bg-color: #f0ebe6;
-    --color-white: #ffffff;
+    /* Accent: authority is live. Used for links, the logo, focus rings. */
+    --color-green: #4ade9b;
+    --color-lightblue: #7fb2ff;
+    --color-darkblue: #2b6fd4;
+    --color-lightgreen: #b9f2d4;
+    --color-orange: #f0a35e;
+    --color-maroon: #e0698c;
+    --color-pink: #c9a6ff;
+
+    /* Surfaces */
+    --bg-color: #0b0e13;
+    --color-white: #f2f5f8;
     --color-black: #000000;
-    --color-dark: #1a1a1a;
-    --color-black-soft: #111111;
-    --color-black-deep: #0a0a0a;
+    --color-dark: #e6ebf2;
+    --color-black-soft: #12161d;
+    --color-black-deep: #070910;
+
+    --text-primary: #f2f5f8;
+    --text-secondary: #9aa7b8;
+    --text-muted: #6b7889;
+    --border-subtle: #1e2530;
+    --border-strong: #2c3543;
+
+    /* Outcome colours. Reused by the chain, so they must stay consistent across
+       every package that reports a result. */
+    --ok: #4ade9b;
+    --fail: #ff7b72;
+    --unknown: #8b949e;
+
+    /* The four commit states. Progress reads left to right as increasing
+       luminance, so the sequence survives greyscale and the common forms of
+       colour vision deficiency even before the shape markers are considered. */
+    --commit-proposed: #6b7889;
+    --commit-voted: #d9a441;
+    --commit-finalized: #4fb477;
+    --commit-verified: #4aa3f0;
 }
 
 /* ─── Reset ─────────────────────────────────────────────────────────────────── */
@@ -36,7 +68,7 @@
 }
 
 ::selection {
-    background-color: var(--color-pink);
+    background-color: var(--color-green);
     color: var(--color-black);
 }
 

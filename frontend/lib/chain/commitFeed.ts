@@ -30,7 +30,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CommitFeed, type CommitState, type FeedStatus } from '@mandat/three-light';
 import { MONAD_TESTNET } from '@mandat/protocol';
-import { MONAD_TESTNET_CHAIN } from './viemChain.js';
+import { MONAD_TESTNET_CHAIN } from './viemChain';
 
 /** How often the accumulated counters are pushed into React state. */
 const PUBLISH_INTERVAL_MS = 1000;

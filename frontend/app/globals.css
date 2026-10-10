@@ -13,6 +13,8 @@
 /* Fonts, CSS variables, reset, body/html  */
 @import './styles/navbar.css';
 /* Navbar, logo, header                    */
+@import './styles/scenes.css';
+/* The four demo scenes                        */
 @import './styles/cursor.css';
 /* Custom cursor bubble + scribble overlay  */
 @import './styles/responsive.css';

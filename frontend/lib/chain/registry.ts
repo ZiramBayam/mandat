@@ -14,10 +14,10 @@
  * against.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPublicClient, http, type Address, type Hex } from 'viem';
 import { authorityRegistryAbi, buildLineage, type AuthorityMeta } from '@mandat/protocol';
-import { MONAD_TESTNET_CHAIN } from './viemChain.js';
+import { MONAD_TESTNET_CHAIN } from './viemChain';
 
 /**
  * One client for the whole app.
@@ -205,4 +205,3 @@ export async function readTokenBalance(token: Address, holder: Address): Promise
 }
 
 export { client as publicClient };
-export const useMemoizedClient = useMemo(() => client, []);
