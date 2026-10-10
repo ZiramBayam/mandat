@@ -82,9 +82,16 @@ curl -X POST https://agents.devnads.com/v1/faucet \
 Then:
 
 ```bash
-cp .env.example .env && cp contracts/.env.example contracts/.env
-# fill in the four private keys the faucet funded
+cp .env.example .env                      # S5 only: the model key
+cp contracts/.env.example contracts/.env  # this is the authoritative one
+# fill in the four private keys the faucet funded, in contracts/.env
 ```
+
+**Which `.env` is which.** `contracts/.env` is the authoritative one — every
+script reads it by explicit path (`g6.ts`, `explorer.ts`, `seller-check.ts`,
+`three-light/setup.ts`). The root `.env` holds only the S5 model key and is read
+by S5 alone. Neither is in git; `.gitignore:16` covers both. Private keys live
+only in `contracts/.env`.
 
 ### Produce the evidence pair
 
@@ -124,8 +131,20 @@ pnpm explorer scene    # registers a two-hop chain, revokes the parent, checks t
 ```bash
 cd packages/authority-header
 pnpm seller-check       # measured gate: 402 / 425 / 403 / 403 / 403, under 1s
+```
+
+`start:seller` needs `contracts/.env` exported into the environment first. The
+seller reads `process.env`, not a file, so running it bare gives it
+`SELLER_ADDRESS = 0x0000…` and every check fails:
+
+```bash
+cd packages/authority-header
+set -a && . ../../contracts/.env && set +a
 pnpm start:seller
 ```
+
+`seller-check` does not need this: it parses `contracts/.env` itself and passes
+the values to the seller it spawns.
 
 ---
 
