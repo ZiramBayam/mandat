@@ -325,3 +325,39 @@ pnpm envelope compile ../../contracts/fixtures/wmon-spend/SKILL.md \
 reproducible and the recorded demo matches the committed file. It must be set to
 a time at or before the recording, because `ERC20PeriodTransfer` rejects a
 `startDate` in the future and `Timestamp` rejects an expiry in the past.
+
+## Source verification
+
+Both contracts are reproducible from this repository, and that is checked rather
+than assumed: recompiling with forge and comparing against the deployment
+transaction shows the **creation bytecode is byte-identical**, constructor
+arguments included.
+
+| Contract | Creation bytecode vs deploy tx |
+|---|---|
+| `AuthorityRegistry` | 7165 B, identical |
+| `SkillAuthorityEnforcer` | 2542 B, identical |
+
+Settings: solc `0.8.23`, optimizer on, 200 runs, `evmVersion` shanghai,
+`bytecodeHash: none`. Note that `foundry.toml` asks for `cancun`, which solc
+0.8.23 does not accept; forge falls back to shanghai, and that is what actually
+produced the deployed code.
+
+Explorer status:
+
+| Contract | MonadVision | Monadscan |
+|---|---|---|
+| `AuthorityRegistry` | **verified** (partial match) | failed — solc 0.8.23 not in its supported list |
+| `SkillAuthorityEnforcer` | failed — see below | failed — same |
+
+The enforcer is not verified on MonadVision. Its constructor takes the registry
+address, which Solidity stores as an immutable, so the recompiled runtime has
+zeros where the chain has a real address. The verification proxy used here
+(`agents.devnads.com/v1/verify`) accepts a `constructorArguments` field but
+discards it: submitting a deliberately wrong argument produces byte-identical
+error text, so the argument never reaches the explorer. `AuthorityRegistry` was
+accepted anyway as a partial match; the enforcer was not. MonadVision's own API
+is behind a Cloudflare challenge and cannot be called directly.
+
+The bytecode evidence above is the stronger proof and it holds either way: the
+code on chain was compiled from `contracts/src` by this repository's own toolchain.
