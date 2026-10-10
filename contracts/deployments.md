@@ -11,13 +11,21 @@ broadcast, not copied from the script's own output. Reproduction commands:
 Re-deployed 5 Okt 2026 after the graph-check fix described below. The previous
 pair is kept in git history, not here: nothing live depended on it.
 
-| Contract | Address | Deploy tx |
-|---|---|---|
-| `AuthorityRegistry` | `0xb51807EC9C8090c155E80B085ebdD999CCf68D30` | `0x1c2d9d11cab05366572dbcb1bdd5fefb54de53f169de6ea5fddcf226368fba73` |
-| `SkillAuthorityEnforcer` | `0x5c6EE4586ACABcb6326069c229E58091B21ef384` | `0x247efd47f074d8e5fd4766bf95ad5a463b151499bb9db551ddff06f5506937e9` |
+| Contract | Address | Deploy tx | Block |
+|---|---|---|---|
+| `AuthorityRegistry` | `0xb51807EC9C8090c155E80B085ebdD999CCf68D30` | `0xeb151e6021d2202842376ae7c1ffa5bf2c6a57211c19b28a626218562d69411a` | 68374949 |
+| `SkillAuthorityEnforcer` | `0x5c6EE4586ACABcb6326069c229E58091B21ef384` | `0x0bb895b6cee835d3b4ccc34e8323de45f0837358f75c110a3958c42542904768` | 68374957 |
+| `MultiSigDeleGator` (impl) | `0x29aCEbb657889507f3960CBEB959e0f8247539d1` | `0x3d47175fe5550b258936c89b813b6eb109c430b2bd7fb417cb0a781b91c87d2b` | 68363175 |
+| Root proxy (the root delegator) | `0xDf9E68Bee379A298709aeb94072d1b1b9A333921` | `0xbc0f39b39d72cbc382271b3d6f8e9a309159b9b411cc0ea86a01c71f67d4b183` | 68363183 |
 
 Re-deployed a third time on 5 Okt 2026 after terms v2 added `allowedSeller`, so
 the addresses above are the current ones. Earlier pairs are in git history.
+
+The deploy transactions and block numbers were recovered by binary-searching
+`eth_getCode` for each contract's first block, not read from the forge broadcast
+files. Those files record only the last run, and two of the hashes previously
+listed here belonged to the *second* deployment pair — the same class of stale
+evidence the G6 section below had to be corrected for.
 
 Verified after deployment, read via `eth_call`:
 
@@ -105,7 +113,7 @@ chain. **The earlier pair recorded here was stale** and has been replaced; see
 
 | | Tx | Result |
 |---|---|---|
-| Redeem **within** cap (0.1 of 0.5 WMON) | `0x8c3f365859ab4a78de9b4bd26b9cbdb0cf6d37f01412022a5df369d41f6c3b00` | **success**, block 69693268 |
+| Redeem **within** cap (0.1 of 0.5 WMON) | `0x8c3f365859ab4a78de9b4bd26b9cbdb0cf6d37f01412022a5df369d41f6c3b00` | **success**, block 69722745 |
 | Redeem **over** cap (0.8 of 0.5 WMON) | `0x0a2c43451a899cefe9855998e5f6e6dac089b8a8b921b3832ed93b0dcced0e15` | **mined and reverted**, block 69723303, 900000 gas |
 
 The over-cap transaction was **mined and reverted on chain**. That distinction is
