@@ -20,3 +20,15 @@ contracts/.env
 # working/ tidak masuk sini. Dokumen kerja tidak boleh di-commit (R1),
 # tapi juga tidak boleh di-gitignore, karena itu menyembunyikannya
 # dari git status dan berbahaya. Aturannya: jangan pernah `git add`.
+
+# reference/ = clone repo pihak ketiga yang jadi sumber layer animasi
+# frontend. Berlawanan dengan working/ di atas, dan itu disengaja.
+#
+# Bedanya: working/ berisi dokumen kita sendiri, jadi kalau hilang dari
+# git status kita lupa isinya. reference/ berisi KODE orang lain, dan
+# kalau tidak di-gitignore, `git add -A` akan menyapunya sebagai gitlink
+# (mode 160000) -- commit kita lalu menunjuk ke commit di repo mereka
+# alih-alih menyalin kodenya, dan tidak bisa di-push.
+#
+# Clone-nya juga sudah tanpa .git, jadi kedua lapisan itu terpisah.
+reference/
