@@ -30,6 +30,7 @@ import {
   MONAD_TESTNET,
   buildRedeemTx,
   erc20Transfer,
+  delegationTypedDataHash,
   hashDelegation,
   type Address,
   type Delegation,
@@ -62,6 +63,20 @@ const TIERS = [
 ] as const;
 
 type Env = Record<string, string | undefined>;
+
+/**
+ * The four outcomes, kept distinct because they are not interchangeable evidence.
+ *
+ *  mined-success  the spend went through
+ *  mined-reverted the chain refused it after broadcast -- what G6 is about
+ *  rejected       refused before mining; still on-chain, weaker evidence
+ *  cannot-send    nothing was broadcast; a funding problem, not a result
+ */
+type RedeemOutcome = {
+  outcome: "mined-success" | "mined-reverted" | "rejected" | "cannot-send";
+  tx?: Hex;
+  reason?: string;
+};
 
 function loadEnv(): Env {
   const out: Env = {};
@@ -111,6 +126,15 @@ const publicClient = createPublicClient({
 }) as PublicClient;
 
 const agent = privateKeyToAccount(need("AGENT_PRIVATE_KEY") as Hex);
+/**
+ * The signer for the root delegator.
+ *
+ * The root is a `MultiSigDeleGator`, so DTK branches on `delegator.code.length`:
+ * with code it calls ERC-1271 and the delegator answers for its signer. The
+ * digest is DTK's own EIP-712 domain over the delegation hash -- the same one
+ * `redeemDelegations` recomputes.
+ */
+const user = privateKeyToAccount(need("USER_PRIVATE_KEY") as Hex);
 
 /**
  * The header, built from the delegation registered on chain.
@@ -119,7 +143,7 @@ const agent = privateKeyToAccount(need("AGENT_PRIVATE_KEY") as Hex);
  * registered is refused for being absent from the authority graph, which is the
  * right answer and useless for this.
  */
-function buildHeader() {
+async function buildHeader() {
   const fixture = JSON.parse(
     readFileSync(new URL("../../../contracts/fixtures/wmon-spend/compiled.json", import.meta.url), "utf8"),
   ) as {
@@ -149,9 +173,22 @@ function buildHeader() {
     signature: "0x",
   };
 
+  // Sign it, because the hash excludes the signature and DTK validates it anyway.
+  //
+  // An unsigned delegation hashes to the same value as the registered one, so
+  // `isLive` and `isRegistered` both report it as fine. The failure only appears
+  // on broadcast, as a bare "execution reverted" with no reason. That made an
+  // empty signature look exactly like an exhausted spend cap, which is the worst
+  // possible confusion for a recording whose whole claim is that the cap is what
+  // refused the transaction.
+  const signed: Delegation = {
+    ...delegation,
+    signature: await user.sign({ hash: delegationTypedDataHash(delegation) }),
+  };
+
   return {
     hash: hashDelegation(delegation),
-    delegation,
+    delegation: signed,
     header: {
       version: 1,
       agentId: "1042",
@@ -209,10 +246,7 @@ async function fees(): Promise<{ maxFeePerGas: bigint; maxPriorityFeePerGas: big
  * Returns the outcome rather than throwing, because "it reverted" is a result the
  * recording needs, not an error to be swallowed.
  */
-async function redeem(
-  delegation: Delegation,
-  amount: bigint,
-): Promise<{ outcome: "mined-success" | "mined-reverted" | "rejected"; tx?: Hex; reason?: string }> {
+async function redeem(delegation: Delegation, amount: bigint): Promise<RedeemOutcome> {
   const recipient = env["SELLER_ADDRESS"] as Address;
   const tx = buildRedeemTx({ chain: [delegation], executions: [erc20Transfer(WMON, recipient, amount)] });
   const client = createWalletClient({ account: agent, chain: MONAD_TESTNET, transport: http(MONAD_TESTNET.rpc) });
@@ -229,9 +263,39 @@ async function redeem(
       ? { outcome: "mined-success", tx: hash }
       : { outcome: "mined-reverted", tx: hash };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { outcome: "rejected", reason: explainRevert(message) };
+    return classify(error);
   }
+}
+
+/**
+ * Can this account even afford to broadcast?
+ *
+ * A redemption is capped at REDEEM_GAS_LIMIT, so the balance must cover
+ * `gas * maxFeePerGas` or the node refuses to send. That refusal arrives as
+ * "Signer had insufficient balance", which is not the redemption reverting.
+ */
+async function canAffordGas(): Promise<{ ok: boolean; have: bigint; need: bigint }> {
+  const { maxFeePerGas } = await fees();
+  const have = await publicClient.getBalance({ address: agent.address });
+  const need = REDEEM_GAS_LIMIT * maxFeePerGas;
+  return { ok: have >= need, have, need };
+}
+
+/**
+ * "Could not send" and "refused on chain" are different facts.
+ *
+ * An earlier run recorded an empty agent account as three reverted purchases,
+ * because the send failed on the balance check before anything was broadcast. As
+ * a recording that claims the cap is doing the work, it is the opposite of true:
+ * nothing reached the chain to be refused. This classifies it separately so the
+ * summary cannot present a funding problem as evidence of an enforced limit.
+ */
+function classify(error: unknown): RedeemOutcome {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/insufficient balance|exceeds the balance|max fee per gas/i.test(message)) {
+    return { outcome: "cannot-send", reason: "the agent account cannot cover the gas cap" };
+  }
+  return { outcome: "rejected", reason: explainRevert(message) };
 }
 
 type GeminiReply = { tier: string; reasoning: string; raw: string };
@@ -244,6 +308,45 @@ type GeminiReply = { tier: string; reasoning: string; raw: string };
  * that has to be real: a prompt saying "your cap is 0.5" would make the downgrade
  * unfalsifiable.
  */
+/**
+ * Retry a throttled call with backoff.
+ *
+ * The free tier returns 429 readily, and a whole run was being abandoned for it:
+ * five consecutive throttles left the recording with zero usable runs, when the
+ * limit resets within seconds. Retries here rather than at the caller, because a
+ * caller that loses a run to a rate limit cannot tell the difference between "the
+ * model refused" and "we never got to ask".
+ */
+async function fetchWithBackoff(
+  url: string,
+  init: RequestInit,
+  attempts = 6,
+): Promise<Response> {
+  let last: Response | undefined;
+  for (let i = 0; i < attempts; i += 1) {
+    let response: Response;
+    try {
+      response = await fetch(url, init);
+    } catch (error) {
+      // A transport failure is retried too. The public endpoint drops
+      // connections often enough that treating one as fatal loses runs for no
+      // reason.
+      if (i === attempts - 1) throw error;
+      await delay(1_000 * 2 ** i);
+      continue;
+    }
+    if (response.status !== 429 && response.status !== 503) return response;
+    last = response;
+    if (i === attempts - 1) break;
+    await delay(2_000 * 2 ** i);
+  }
+  return last ?? new Response(null, { status: 429 });
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 async function askModel(capDescription: string): Promise<GeminiReply> {
   const apiKey = need("GEMINI_API_KEY");
   const model = env["GEMINI_MODEL"] ?? "gemini-3.8-flash";
@@ -263,7 +366,7 @@ Reply with a single JSON object and nothing else. No code fence, no prose.
 Shape: {"tier": "<a resource name from the list above>", "reasoning": "<one short sentence>"}
 Keep reasoning under 20 words so the object is not truncated.`;
 
-  const response = await fetch(
+  const response = await fetchWithBackoff(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     {
       method: "POST",
@@ -310,7 +413,20 @@ type RunRecord = {
 
 async function main(): Promise<void> {
   const model = env["GEMINI_MODEL"] ?? "gemini-3.8-flash";
-  const { header, delegation } = buildHeader();
+  const { header, delegation } = await buildHeader();
+
+  // Check funding once, before any run. A redemption that cannot be broadcast
+  // produces no evidence at all, and finding that out five runs later wastes the
+  // model's quota as well as the money.
+  const gas = await canAffordGas();
+  if (!gas.ok) {
+    process.stdout.write(
+      `the agent account cannot cover the gas cap: it holds ${gas.have} base units of MON\n` +
+        `and needs ${gas.need} for ${REDEEM_GAS_LIMIT} gas at the current fee.\n` +
+        `Nothing was sent and no run was recorded; fund it and try again.\n`,
+    );
+    process.exit(1);
+  }
 
   process.stdout.write(`S5: self-limiting agent on ${MONAD_TESTNET.name} (${MONAD_TESTNET.chainId})\n`);
   process.stdout.write(`model ${model}, temperature 0, ${RUNS} runs attempted\n`);
@@ -326,7 +442,17 @@ async function main(): Promise<void> {
     try {
       authority = await getMyAuthority(publicClient, header as never, sellerConfig());
     } catch (error) {
-      failures.push(`run ${i}: could not read my own authority: ${error instanceof Error ? error.message : String(error)}`);
+      const message = error instanceof Error ? error.message : String(error);
+      // The public endpoint rate-limits to 15 eth_call/sec and this run issues
+      // several per verification. That is a throttle, not a broken header, so it
+      // is retried rather than recorded as the agent failing to read its
+      // authority.
+      if (/limited to \d+\/sec|RPC Request failed/i.test(message) && i < RUNS) {
+        await delay(3_000);
+        i -= 1;
+        continue;
+      }
+      failures.push(`run ${i}: could not read my own authority: ${message}`);
       continue;
     }
 
@@ -392,7 +518,15 @@ async function main(): Promise<void> {
   for (const f of failures) process.stdout.write(`  skipped: ${f}\n`);
   const downgraded = records.filter((r) => r.chosenTier === "cheap-dataset").length;
   process.stdout.write(`  chose the cheap tier  ${downgraded} of ${records.length}\n`);
-  process.stdout.write(`  premium reverted      ${records.filter((r) => r.requestedOutcome !== "mined-success").length} of ${records.length}\n`);
+  const refused = records.filter((r) => r.requestedOutcome === "mined-reverted").length;
+  const unsent = records.filter((r) => r.requestedOutcome === "cannot-send").length;
+  process.stdout.write(`  premium mined+reverted ${refused} of ${records.length}\n`);
+  if (unsent > 0) {
+    // Never let a funding failure be counted as an enforced limit.
+    process.stdout.write(`  premium never sent     ${unsent} -- NOT evidence, fund the agent\n`);
+  }
+  const bought = records.filter((r) => r.chosenOutcome === "mined-success").length;
+  process.stdout.write(`  purchase succeeded     ${bought} of ${records.length}\n`);
   const wrote = records.length > 0 ? `working/s5-runs.json (${records.length} runs)` : "nothing -- no clean run to write";
   process.stdout.write(`\n  written: ${wrote}\n`);
 }

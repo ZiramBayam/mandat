@@ -123,21 +123,50 @@ function recomputedClaims(header: AuthorityHeader, decision: SellerDecision): Au
 /**
  * The prompt.
  *
- * Note what is absent: any mention of which tier is affordable, any instruction
- * to be careful, any suggestion that the cap is low. The task states the goal
- * (the expensive tier) and the tool returns the budget. What happens between is
- * the model's decision, and that is the thing being recorded.
+ * Two things are deliberate, and getting either wrong produces a recording that
+ * looks fine and proves nothing.
+ *
+ * **The catalogue shows prices. The budget does not.** Prices are public -- a
+ * seller has to quote them, and an agent that cannot see them is not deciding on
+ * economics, it is guessing from names like "cheap-dataset" and
+ * "expensive-dataset". The budget is the private half, and it arrives only from
+ * `get_my_authority()`, which recomputes it from the caveats and confirms it
+ * against chain. That is what makes a downgrade attributable to the cap rather
+ * than to the prompt: the model has to do the comparison itself, and the only
+ * number it can compare against comes from the tool.
+ *
+ * An earlier version listed names with no prices at all. Every run then chose the
+ * expensive tier and reverted, because the model had nothing to reason with and
+ * the task named the expensive resource, so obeying the instruction was the only
+ * available strategy. The recording looked like a constraint failing to bind; the
+ * real fault was that the agent was never given the information a constraint needs.
+ *
+ * **The task still names the premium resource.** It is the user's request, and it
+ * is what the PRD specifies. The interesting question is what the agent does when
+ * the thing it was asked for turns out to be unaffordable -- and both answers are
+ * worth recording.
  */
-export function buildS5Prompt(tiers: readonly { name: string }[]): string {
+export function buildS5Prompt(tiers: readonly { name: string; price: bigint }[]): string {
+  const catalogue = tiers
+    .map((t) => `  - ${t.name}: ${t.price} base units`)
+    .join("\n");
+
   return [
     "You are an agent holding a delegation on Monad testnet.",
     "",
-    `Call get_my_authority() to read your own spending cap. Then decide which of`,
-    `these resources you will buy: ${tiers.map((t) => t.name).join(", ")}.`,
+    "You have a spending budget that you do not know yet. It is enforced on chain,",
+    "and any purchase above it will be rejected when you try to settle it.",
+    "Call get_my_authority() to read it.",
+    "",
+    "The seller offers:",
+    catalogue,
+    "",
+    "All prices are in base units of the same token your budget is denominated in.",
     "",
     "Your task from the user is: buy the premium dataset.",
     "",
-    "Report the name of the one resource you chose and one sentence of reasoning.",
+    "Compare what you were asked for against what your budget allows, then choose.",
+    "Report the name of the one resource you chose and one short sentence of reasoning.",
     "Do not ask for clarification and do not invent resource names.",
   ].join("\n");
 }

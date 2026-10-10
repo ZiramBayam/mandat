@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { buildS5Prompt, parseAgentDecision } from "../src/agent/authority.js";
 
+const CATALOGUE = [
+  { name: "cheap-dataset", price: 100_000_000_000_000_000n },
+  { name: "expensive-dataset", price: 800_000_000_000_000_000n },
+];
+
 /**
  * The parser is the only part of S5 that can fail silently.
  *
@@ -47,20 +52,44 @@ describe("parseAgentDecision", () => {
 });
 
 describe("buildS5Prompt", () => {
-  it("offers exactly the catalogue names and nothing else", () => {
-    const prompt = buildS5Prompt([{ name: "cheap-dataset" }, { name: "expensive-dataset" }]);
-    expect(prompt).toContain("cheap-dataset, expensive-dataset");
+  it("quotes prices in base units, since that is what the cap is in too", () => {
+    // The comparison has to be like-for-like. The cap arrives in base units from
+    // the tool, so a price quoted in whole tokens would not be comparable to it
+    // without arithmetic the prompt never asks for.
+    const prompt = buildS5Prompt(CATALOGUE);
+    expect(prompt).toContain("base units");
+    expect(prompt).not.toMatch(/cheap-dataset: 0\.1/);
   });
 
-  it("does not leak a price or a cap into the prompt", () => {
-    // The downgrade has to come from get_my_authority(). If a price appeared here
-    // the model could compare against it without ever reading its own budget,
-    // and the recording would not show what it claims to show.
-    const prompt = buildS5Prompt([{ name: "cheap-dataset" }, { name: "expensive-dataset" }]);
-    expect(prompt).not.toMatch(/0\.1|0\.8|500000000000000000|800000000000000000/);
+  it("shows the catalogue with prices, so the agent can compare at all", () => {
+    // Prices are public. An agent that cannot see them is guessing from a name
+    // like "cheap-dataset" rather than deciding on economics.
+    const prompt = buildS5Prompt(CATALOGUE);
+    expect(prompt).toContain("cheap-dataset: 100000000000000000");
+    expect(prompt).toContain("expensive-dataset: 800000000000000000");
   });
 
-  it("asks for the premium resource, so a downgrade is a real decision", () => {
-    expect(buildS5Prompt([{ name: "cheap-dataset" }])).toContain("buy the premium dataset");
+  it("never states the agent's budget, because that is the tool's job", () => {
+    // The cap is the whole point of the demo. If a number appeared here the model
+    // could compare without ever reading its own authority, and a downgrade would
+    // prove nothing about the constraint binding.
+    const prompt = buildS5Prompt(CATALOGUE);
+    expect(prompt).not.toContain("500000000000000000");
+    expect(prompt).not.toContain("my budget is");
+    expect(prompt).not.toMatch(/cap of \d+/);
+  });
+
+  it("says the budget is enforced on chain, which is true and is the point", () => {
+    expect(buildS5Prompt(CATALOGUE)).toContain("enforced on chain");
+  });
+
+  it("tells the agent to compare rather than merely to obey", () => {
+    const prompt = buildS5Prompt(CATALOGUE);
+    expect(prompt).toContain("Compare what you were asked for against what your budget allows");
+    expect(prompt).toContain("buy the premium dataset");
+  });
+
+  it("tells the agent to read its authority before choosing", () => {
+    expect(buildS5Prompt(CATALOGUE)).toContain("Call get_my_authority()");
   });
 });
