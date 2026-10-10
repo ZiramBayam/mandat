@@ -29,6 +29,7 @@
  */
 
 import { readFileSync } from "node:fs";
+import { explainRevert } from "../src/protocol/revertReason.js";
 import {
   createPublicClient,
   createWalletClient,
@@ -116,19 +117,38 @@ const publicClient = createPublicClient({ transport: http(MONAD_TESTNET.rpc) });
  * raw pair is what `redeem.ts` produces, so this skips the ABI layer entirely.
  */
 /**
- * Fee bounds, stated rather than estimated.
+ * Gas headroom for a redemption.
  *
- * `sendTransaction` without them asks the node for a suggested price, and on this
- * endpoint that came back high enough that a 0.34 MON account reported "insufficient
- * balance" for a transaction that costs about 0.00005 MON. A redemption that
- * cannot be sent is not a redemption, and the fee is our choice to make.
- *
- * Both figures are far above the observed 0.1 gwei base fee and below anything
- * that would make a 0.3 MON balance look small.
+ * Measured on testnet: an ERC-20 period transfer redeemed in 515,563 gas, so this
+ * carries real margin rather than being a guess. It is not free: at the 102 gwei
+ * effective price observed on 5 Oct 2026, the full cap costs about 0.092 MON.
  */
-const MAX_FEE_PER_GAS = 20_000_000_000n; // 20 gwei
-const MAX_PRIORITY_FEE = 1_000_000_000n; // 1 gwei
 const REDEEM_GAS_LIMIT = 900_000n;
+
+/**
+ * Fees are estimated and then floored, not pinned.
+ *
+ * This was `maxFeePerGas: 20 gwei`, chosen when testnet's base fee sat at
+ * 0.102 gwei. The base fee is now **100 gwei**, and the node rejects a max fee
+ * below it with "Transaction fee too low" before the transaction is even sent. The
+ * pinning was meant to avoid a different failure -- an estimated fee high enough to
+ * make a small balance look insufficient -- but a fixed number goes stale the
+ * moment the network's base fee moves, and it did.
+ *
+ * Estimating reintroduces the original risk, so the estimate is floored at twice
+ * the current base fee and taken as a maximum rather than the price actually paid.
+ * A base fee that rises between the estimate and inclusion still gets covered.
+ */
+async function fees(): Promise<{ maxFeePerGas: bigint; maxPriorityFeePerGas: bigint }> {
+  const block = await publicClient.getBlock();
+  const estimate = await publicClient.estimateFeesPerGas();
+  const base = block.baseFeePerGas ?? 0n;
+  const suggested = estimate.maxFeePerGas ?? 0n;
+  return {
+    maxFeePerGas: suggested > base * 2n ? suggested : base * 2n,
+    maxPriorityFeePerGas: estimate.maxPriorityFeePerGas ?? 1_000_000_000n,
+  };
+}
 
 async function submitTransaction(
   account: ReturnType<typeof privateKeyToAccount>,
@@ -140,8 +160,7 @@ async function submitTransaction(
     data: tx.data,
     chain: CHAIN,
     gas: REDEEM_GAS_LIMIT,
-    maxFeePerGas: MAX_FEE_PER_GAS,
-    maxPriorityFeePerGas: MAX_PRIORITY_FEE,
+    ...(await fees()),
   });
 }
 
@@ -456,22 +475,39 @@ async function main(): Promise<void> {
       executions: [erc20Transfer(WMON, recipient, OVER_CAP)],
     });
     process.stdout.write(`\nredeem ${OVER_CAP} WMON (over the cap)\n`);
+    let revertTx: Hex | undefined;
     try {
       const hash = await submitRaw(tx);
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      throw new Error(
-        `T2 FAILED: expected a revert, got status ${receipt.status} on ${hash}`,
-      );
+      // A mined transaction with status "reverted" is the strongest evidence
+      // available: it proves the enforcer rejected the call on chain rather than
+      // our middleware declining to send it. This branch used to throw on any
+      // status that was not "success", which treated that exact outcome as the
+      // failure it was meant to detect.
+      if (receipt.status !== "reverted") {
+        throw new Error(`T2 FAILED: expected a revert, got status ${receipt.status} on ${hash}`);
+      }
+      revertTx = hash;
+      process.stdout.write(`  reverted on chain, as required\n`);
+      process.stdout.write(`  tx    ${hash}\n  block ${receipt.blockNumber}\n`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes("T2 FAILED")) throw error;
-      process.stdout.write(`  reverted as expected\n`);
-      process.stdout.write(`  reason: ${message.slice(0, 300)}\n`);
+      // The node rejected it before mining: either gas estimation or a preflight
+      // call surfaced the revert. Still evidence, but weaker than a mined
+      // transaction, so it is reported as such.
+      process.stdout.write(`  rejected before mining\n`);
+      process.stdout.write(`  reason: ${explainRevert(message)}\n`);
     }
     const after = await balanceOf(rootDelegator);
     process.stdout.write(`  root WMON ${before} -> ${after}\n`);
     if (after !== before) throw new Error("a reverted redemption moved tokens");
     process.stdout.write("  nothing moved, as required\n");
+
+    // Printed last so the pair can be copied straight into deployments.md without
+    // hunting for it. A mined revert is the version worth recording; a preflight
+    // rejection proves the same thing less directly.
+    process.stdout.write(`\n  G6 over-cap: ${revertTx ?? "not mined"}\n`);
   }
 
   if (step === "all" || step === "revoke") {

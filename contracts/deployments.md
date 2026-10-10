@@ -99,21 +99,41 @@ at least one denial among them.
 
 ## G6 — the two transactions the project exists to produce
 
-Produced 5 Okt 2026. Both read back from chain.
+Produced 5 Okt 2026 against the Terms v2 deployment below. Both read back from
+chain. **The earlier pair recorded here was stale** and has been replaced; see
+"Why this pair was re-recorded".
 
 | | Tx | Result |
 |---|---|---|
-| Redeem **within** cap (0.1 of 0.5 WMON) | `0x0c42158f7eb615d4537492e4bb602c874797a569f2092eef2eeeed5cc906508b` | **success**, block 68368270 |
-| Redeem **over** cap (0.8 of 0.5 WMON) | reverted | `ERC20PeriodTransferEnforcer:transfer-amount-exceeded` |
+| Redeem **within** cap (0.1 of 0.5 WMON) | `0x8c3f365859ab4a78de9b4bd26b9cbdb0cf6d37f01412022a5df369d41f6c3b00` | **success**, block 69693268 |
+| Redeem **over** cap (0.8 of 0.5 WMON) | `0x0a2c43451a899cefe9855998e5f6e6dac089b8a8b921b3832ed93b0dcced0e15` | **mined and reverted**, block 69723303, 900000 gas |
 
-The revert reason is DTK's own enforcer, not our middleware. That distinction is
-the whole point: a seller refusing a request proves only that the seller works.
+The over-cap transaction was **mined and reverted on chain**. That distinction is
+the point: it is DTK's own enforcer rejecting the call after the transaction was
+broadcast, not our script declining to send it and not our middleware answering
+`403`. A reverted transaction has a block number and a gas cost; a middleware
+refusal has neither.
+
+The over-cap revert consumed the full 900k gas cap and moved nothing.
+
+### Why this pair was re-recorded
+
+The previous pair (`0x0c42158f…`, block 68368270) was recorded against a registry
+that no longer exists. The current `AuthorityRegistry`
+`0xb51807EC9C8090c155E80B085ebdD999CCf68D30` was deployed at block **68374949**,
+6,679 blocks *after* that transaction. The Terms v2 change to
+`SkillAuthorityEnforcer` also came after it. So the old evidence proved the
+behaviour of a contract that is no longer deployed.
+
+Found by binary-searching `eth_getCode` for the registry's deployment block and
+comparing it to the recorded transaction's block, rather than by noticing. A
+stale evidence pair in a document about evidence is worth the check.
 
 Balances read back after both, not from the script's own log:
 
 ```
-root delegator 0xDf9E68…  0.6 WMON   (0.7 before)
-sub-agent       0xeDaeDE…  0.3 WMON   (0.2 before)
+root delegator 0xDf9E68…  0.4 WMON   (0.5 before)
+sub-agent       0xeDaeDE…  0.5 WMON   (0.4 before)
 ```
 
 The successful transaction emitted a `Transfer` event from the root delegator to
