@@ -52,6 +52,22 @@ cannot be polled. A seller withholds a paid resource until the required lamp
 lights, and **clears the lamps if the socket drops** rather than freezing on the
 last known state.
 
+**4. An agent that limits itself.** Given one task — buy the premium dataset —
+and a delegation capped at 0.5 WMON, a real model read its own cap from the
+chain and chose the 0.1 tier on its own, twice, with no instruction to
+downgrade. Asking for the 0.8 tier reverted on chain both times:
+
+| | Purchase 0.1 | Premium 0.8 |
+|---|---|---|
+| [run 1](https://testnet.monadvision.com/tx/0xf6ff1dfd267d81708f787908b2f74fd1d60e00e29ec99ff5ab08196c4854b6a6) | **success** | [reverted](https://testnet.monadvision.com/tx/0x04621edfb228a0185b071bc5bc9d6b1e729d0a716198208241c16b91b7e87bb9) |
+| [run 2](https://testnet.monadvision.com/tx/0x1be2c572ac9d1d31c726b896f50e287009a68f399edbaf349fe06c275f2ddd94) | **success** | [reverted](https://testnet.monadvision.com/tx/0x13ebf10a59a6b69a7a13d8ae799e1bb1ac291590a8244ecf387b1d0c4e3dad84) |
+
+The cap it reads is recomputed from the caveats and confirmed against chain, not
+taken from the header, and it picks a tier *name* — the runner supplies the price.
+Otherwise a downgrade would prove nothing. Full record and the three runs that
+are honestly not evidence:
+[`contracts/deployments.md`](contracts/deployments.md#s5--an-agent-that-reads-its-own-cap).
+
 ---
 
 ## Running it
@@ -104,6 +120,19 @@ pnpm g6 over      # attempts 0.8 WMON, reverts on chain
 `pnpm g6` refuses to send a redemption when the agent cannot pay for it, and
 estimates fees rather than pinning them. The old 20 gwei pin was below the
 network's base fee and the script could not run at all.
+
+### Watch the agent limit itself
+
+```bash
+# needs GEMINI_API_KEY in the root .env
+cd packages/authority-header
+pnpm s5
+```
+
+Five runs at temperature 0. Each one reads the agent's own cap through the
+seller's verification path, asks the model which resource it will buy, executes
+that choice on chain, and separately attempts the premium tier so the record
+contains the revert too. Writes `working/s5-runs.json`.
 
 ### Watch a transaction reach finality
 
@@ -212,6 +241,14 @@ temperature 0).** The original design in `working/prd.md` specified
 `qwen3.8-max`; it was changed to Gemini on resource grounds. Nothing in S5
 depends on which model is used: what it demonstrates is an agent reading its own
 cap from an Authority Header and deciding accordingly.
+
+The prompt shows the price of each tier and the model's task, but **never states
+the agent's budget** — that arrives only from the chain, through the same
+verification a seller would run. Without that, "the agent read its cap and
+downgraded" would not be a claim anything could falsify. An earlier version of
+the prompt also omitted prices, which made every run attempt the premium tier;
+that was a broken prompt, not a broken constraint, and it is described in
+`contracts/deployments.md`.
 
 The rest of the codebase — contracts, envelope compiler, seller, Three-Light,
 G6, explorer — is not model-generated in its design; it was written against the

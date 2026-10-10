@@ -204,6 +204,60 @@ to it. What we enforce is `revokedAt` in `AuthorityRegistry`, read by our own
 enforcer. A delegator can additionally call DTK's `disableDelegation` directly;
 we do not, and the README should not imply the two are the same mechanism.
 
+## S5 — an agent that reads its own cap
+
+Five runs, `gemini-3.8-flash`, temperature 0. The agent calls
+`get_my_authority()`, which returns the cap **recomputed from the caveats and
+confirmed against chain** — not the number the header asserts. It then chooses a
+tier *name*; the price is looked up by the runner, so the model can choose what to
+buy but never what it costs.
+
+Full record: `working/s5-runs.json`.
+
+| Run | Agent read | Chose | Purchase (0.1) | Premium (0.8) |
+|---|---|---|---|---|
+| 1 | 0.5 WMON | cheap | **success** `0xf6ff1dfd…4b6a6` | **reverted** `0x04621edf…7bb9` |
+| 2 | 0.5 WMON | cheap | **success** `0x1be2c572…2ddd94` | **reverted** `0x13ebf10a…dad84` |
+| 3 | 0.5 WMON | cheap | reverted (root out of WMON) | reverted |
+| 4 | 0.5 WMON | cheap | not sent (agent out of gas) | reverted |
+| 5 | 0.5 WMON | cheap | not sent | not sent |
+
+**Runs 1 and 2 are the demonstration.** Both read the cap, both downgraded
+unprompted, both purchases mined and succeeded, and both premium attempts mined
+and reverted at 900k gas.
+
+**Runs 3–5 are recorded as they happened, and they are not evidence.** The root
+delegator's WMON ran out during the run, so the cheap tier stopped being
+transferable; then the agent ran out of gas. Neither is a property of the
+authority envelope, and the runner reports them under distinct outcomes
+(`mined-reverted` and `cannot-send`) precisely so they cannot be read as an
+enforced limit.
+
+### Why the first attempt chose the expensive tier
+
+An earlier version of the prompt listed the tier *names* without prices. The model
+could not compare 0.8 against a cap of 0.5, so obeying the task was the only
+available strategy, and every run reverted. That looked like the constraint
+failing to bind when in fact the agent had never been told what anything cost.
+Prices are now in the prompt; the cap still arrives only from the tool call.
+
+### Two faults that silently misreported the cap
+
+Both produced evidence-shaped output that was not evidence, which is why they are
+worth naming.
+
+**An unsigned delegation looks valid everywhere except broadcast.** The
+delegation hash excludes the signature, so an unsigned delegation hashes to the
+same value as the registered one, and `isLive`, `isRegistered` and the enforcer's
+own graph check all report it as fine. DTK validates the signature when the
+transaction arrives, so the call reverted with no reason data. From the outside
+that is indistinguishable from the cap refusing an affordable purchase.
+
+**An empty account looks like a refusal.** The first version recorded
+"Signer had insufficient balance" as a reverted purchase. Nothing had been
+broadcast. A fourth outcome, `cannot-send`, now separates them, and the runner
+checks its own gas budget before spending any model quota.
+
 ## G9 — revoking a parent kills the subtree
 
 `pnpm --filter @mandat/authority-header explorer scene` registers a two-hop chain,
