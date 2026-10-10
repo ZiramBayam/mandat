@@ -17,7 +17,8 @@
     "start:seller": "tsx src/seller/main.ts",
     "g6": "tsx scripts/g6.ts",
     "explorer": "tsx scripts/explorer.ts",
-    "seller-check": "tsx scripts/seller-check.ts"
+    "seller-check": "tsx scripts/seller-check.ts",
+    "s5": "tsx scripts/s5.ts"
   },
   "dependencies": {
     "@mandat/protocol": "workspace:*",
