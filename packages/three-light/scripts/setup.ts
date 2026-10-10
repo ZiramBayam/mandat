@@ -14,7 +14,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import { createWalletClient, http, parseEther, type Address, type Hex } from "viem";
+import { createPublicClient, createWalletClient, http, parseEther, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { MONAD_TESTNET } from "@mandat/protocol";
 
@@ -25,14 +25,41 @@ type Env = Record<string, string | undefined>;
 
 function loadEnv(): Env {
   const out: Env = {};
-  for (const line of readFileSync(new URL("../../../contracts/.env", import.meta.url), "utf8").split("\n")) {
-    const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
-    if (m?.[1] !== undefined && m[2] !== undefined) out[m[1]] = m[2];
+  // Both files, because they hold different things and neither is a superset:
+  // contracts/.env has the chain addresses and the agent keys, the root .env has
+  // the model key. First non-empty wins, so a blank line in one cannot wipe a real
+  // value from the other.
+  const urls = [
+    new URL("../../../contracts/.env", import.meta.url),
+    new URL("../../../.env", import.meta.url),
+  ];
+  for (const url of urls) {
+    let text: string;
+    try {
+      text = readFileSync(url, "utf8");
+    } catch {
+      continue;
+    }
+    for (const line of text.split("\n")) {
+      const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
+      if (m?.[1] === undefined || m[2] === undefined) continue;
+      if (m[2].length === 0) continue;
+      if (out[m[1]] !== undefined) continue;
+      out[m[1]] = m[2];
+    }
   }
   return out;
 }
 
 const env = loadEnv();
+
+function requireAddress(name: string): Address {
+  const v = env[name];
+  if (v === undefined || !/^0x[0-9a-fA-F]{40}$/.test(v)) {
+    throw new Error(`${name} missing or malformed in contracts/.env`);
+  }
+  return v as Address;
+}
 
 function requireKey(name: string): Hex {
   const v = env[name];
@@ -62,6 +89,43 @@ async function deposit(wrapWei: bigint): Promise<void> {
     value: wrapWei,
   });
   process.stdout.write(`deposit ${wrapWei} wei -> ${hash}\n`);
+}
+
+/**
+ * Move WMON from USER to the root delegator.
+ *
+ * The missing half of `deposit`. Wrapping leaves the tokens with USER, but the
+ * tokens the delegation can spend are the root's, because the delegation's
+ * delegator *is* the root. `g6.ts` reads the root's balance and refuses to redeem
+ * when it is zero, which it did -- twice, once on each of two days.
+ *
+ * Sent from USER rather than from the agent, and that is the point rather than an
+ * implementation detail: the authority that decides how much the agent may spend
+ * is the same party that supplies the budget. An agent able to top itself up would
+ * be able to raise its own cap, and the cap would be advisory.
+ */
+async function fund(amount: bigint): Promise<void> {
+  const account = privateKeyToAccount(requireKey("USER_PRIVATE_KEY"));
+  const client = createWalletClient({ account, chain, transport: http(MONAD_TESTNET.rpc) });
+  const root = requireAddress("ROOT_DELEGATOR");
+
+  // Fees are estimated and floored rather than pinned. The base fee moved from
+  // 0.102 gwei to 100 gwei during this project, and a pinned max fee below it is
+  // rejected outright, so a constant here is a landmine that fires days later.
+  const block = await createPublicClient({ chain, transport: http(MONAD_TESTNET.rpc) }).getBlock();
+  const base = block.baseFeePerGas ?? 0n;
+
+  const hash = await client.writeContract({
+    address: WMON,
+    abi: [
+      { type: "function", name: "transfer", stateMutability: "nonpayable", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [{ type: "bool" }] },
+    ] as const,
+    functionName: "transfer",
+    args: [root, amount],
+    maxFeePerGas: base * 2n,
+    maxPriorityFeePerGas: 1_000_000_000n,
+  });
+  process.stdout.write(`fund root ${amount} wei -> ${hash}\n`);
 }
 
 async function delegate7702(): Promise<void> {
@@ -140,12 +204,14 @@ const [command, arg] = process.argv.slice(2);
 try {
   if (command === "deposit") {
     await deposit(parseEther(arg ?? "1"));
+  } else if (command === "fund") {
+    await fund(parseEther(arg ?? "0.5"));
   } else if (command === "delegate") {
     await delegate7702();
   } else if (command === "verify") {
     await codeAt(privateKeyToAccount(requireKey("USER_PRIVATE_KEY")).address);
   } else {
-    process.stderr.write("usage: setup <deposit [MON]|delegate|verify>\n");
+    process.stderr.write("usage: setup <deposit [MON]|fund [WMON]|delegate|verify>\n");
     process.exit(2);
   }
 } catch (error) {

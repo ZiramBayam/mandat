@@ -113,8 +113,8 @@ chain. **The earlier pair recorded here was stale** and has been replaced; see
 
 | | Tx | Result |
 |---|---|---|
-| Redeem **within** cap (0.1 of 0.5 WMON) | `0x8c3f365859ab4a78de9b4bd26b9cbdb0cf6d37f01412022a5df369d41f6c3b00` | **success**, block 69722745 |
-| Redeem **over** cap (0.8 of 0.5 WMON) | `0x0a2c43451a899cefe9855998e5f6e6dac089b8a8b921b3832ed93b0dcced0e15` | **mined and reverted**, block 69723303, 900000 gas |
+| Redeem **within** cap (0.1 of 0.5 WMON) | `0x477436f21f2162cb9db4ef15ab78565a89b6abaf979062370249c29cf530d357` | **success**, block 69837495 |
+| Redeem **over** cap (0.8 of 0.5 WMON) | `0x870080debbd23926d336fc6c338553f0e0a95f233d74e8b8d149b2b05cd275ee` | **mined and reverted**, block 69837609, 900000 gas |
 
 The over-cap transaction was **mined and reverted on chain**. That distinction is
 the point: it is DTK's own enforcer rejecting the call after the transaction was
@@ -141,7 +141,7 @@ Balances read back after both, not from the script's own log:
 
 ```
 root delegator 0xDf9E68…  0.4 WMON   (0.5 before)
-sub-agent       0xeDaeDE…  0.5 WMON   (0.4 before)
+sub-agent       0xeDaeDE…  0.7 WMON   (0.6 before)
 ```
 
 The successful transaction emitted a `Transfer` event from the root delegator to

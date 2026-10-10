@@ -18,8 +18,8 @@ Two transactions, same delegation, same period, 1 second apart:
 
 | | Tx | Result |
 |---|---|---|
-| Redeem **0.1 WMON**, cap is 0.5 | [`0x8c3f36…`](https://testnet.monadvision.com/tx/0x8c3f365859ab4a78de9b4bd26b9cbdb0cf6d37f01412022a5df369d41f6c3b00) | **mined, success** |
-| Redeem **0.8 WMON**, cap is 0.5 | [`0x0a2c43…`](https://testnet.monadvision.com/tx/0x0a2c43451a899cefe9855998e5f6e6dac089b8a8b921b3832ed93b0dcced0e15) | **mined, reverted** |
+| Redeem **0.1 WMON**, cap is 0.5 | [`0x8c3f36…`](https://testnet.monadvision.com/tx/0x477436f21f2162cb9db4ef15ab78565a89b6abaf979062370249c29cf530d357) | **mined, success** |
+| Redeem **0.8 WMON**, cap is 0.5 | [`0x0a2c43…`](https://testnet.monadvision.com/tx/0x870080debbd23926d336fc6c338553f0e0a95f233d74e8b8d149b2b05cd275ee) | **mined, reverted** |
 
 The second transaction was broadcast, mined, and reverted **by DTK's own
 enforcer** — 900k gas consumed, zero tokens moved. Not our middleware declining
@@ -138,7 +138,7 @@ contains the revert too. Writes `working/s5-runs.json`.
 
 ```bash
 cd packages/three-light
-pnpm watch 0x8c3f365859ab4a78de9b4bd26b9cbdb0cf6d37f01412022a5df369d41f6c3b00
+pnpm watch 0x477436f21f2162cb9db4ef15ab78565a89b6abaf979062370249c29cf530d357
 ```
 
 Follows one transaction through all four commit states on the live

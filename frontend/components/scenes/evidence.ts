@@ -25,9 +25,9 @@ export const MANIFEST = '0xeb4c4e0291f09b5342f66d21de289c8c27b8923d9932e7a00fcc8
 
 /** Scene 2: the pair. One mined and succeeded, one mined and reverted. */
 export const TX_WITHIN_CAP =
-  '0x8c3f365859ab4a78de9b4bd26b9cbdb0cf6d37f01412022a5df369d41f6c3b00' as const;
+  '0x477436f21f2162cb9db4ef15ab78565a89b6abaf979062370249c29cf530d357' as const;
 export const TX_OVER_CAP =
-  '0x0a2c43451a899cefe9855998e5f6e6dac089b8a8b921b3832ed93b0dcced0e15' as const;
+  '0x870080debbd23926d336fc6c338553f0e0a95f233d74e8b8d149b2b05cd275ee' as const;
 
 /** Scene 3: the agent's own purchase, and the premium attempt it declined. */
 export const TX_AGENT_CHEAP =
