@@ -69,6 +69,20 @@
     margin: 1.5rem 0;
 }
 
+.commit-lamps-fallback button {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border-radius: 10px;
+    transition: background-color 0.2s ease;
+}
+
+.commit-lamps-fallback button:hover {
+    background: var(--color-black-deep);
+}
+
 .commit-lamps-fallback li {
     display: flex;
     align-items: center;
@@ -81,7 +95,7 @@
     transition: opacity 0.4s ease, border-color 0.4s ease;
 }
 
-.commit-lamps-fallback li.is-lit {
+.commit-lamps-fallback button.is-lit {
     opacity: 1;
     border-color: var(--border-strong);
 }
@@ -117,19 +131,19 @@ li[data-state='Verified'] .lamp-dot {
     clip-path: polygon(50% 0, 100% 100%, 0 100%);
 }
 
-.commit-lamps-fallback li.is-lit[data-state='Proposed'] .lamp-dot {
+.commit-lamps-fallback button.is-lit[data-state='Proposed'] .lamp-dot {
     background: var(--commit-proposed);
 }
 
-.commit-lamps-fallback li.is-lit[data-state='Voted'] .lamp-dot {
+.commit-lamps-fallback button.is-lit[data-state='Voted'] .lamp-dot {
     background: var(--commit-voted);
 }
 
-.commit-lamps-fallback li.is-lit[data-state='Finalized'] .lamp-dot {
+.commit-lamps-fallback button.is-lit[data-state='Finalized'] .lamp-dot {
     background: var(--commit-finalized);
 }
 
-.commit-lamps-fallback li.is-lit[data-state='Verified'] .lamp-dot {
+.commit-lamps-fallback button.is-lit[data-state='Verified'] .lamp-dot {
     background: var(--commit-verified);
 }
 

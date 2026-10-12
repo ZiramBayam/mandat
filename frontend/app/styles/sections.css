@@ -396,3 +396,470 @@
     margin: 1.25rem 0 0;
     max-width: 34ch;
 }
+
+/* ─── One screen per section ─────────────────────────────────────────────────
+   Every section is exactly one viewport tall, so scrolling moves between ideas
+   rather than through a stretch of the same one.
+
+   100svh rather than 100vh: on a phone 100vh is measured with the browser's URL
+   bar retracted, so the moment that bar slides back the section is taller than
+   the screen and the layout jumps. svh uses the smallest viewport, which does
+   not move. The 100vh line is there for browsers without svh; it degrades to
+   the jump rather than to a broken height.
+
+   Content was measured before this was set rather than after. At a 844px
+   viewport the sections ran 1401 / 1202 / 967 / 844, and the last one already
+   overflowed its own box by 292px. Anything that does not fit was reduced at
+   the source -- padding, type scale, card size, column count -- so that the
+   height is a consequence of the layout fitting, not of the content being cut.
+───────────────────────────────────────────────────────────────────────────── */
+.motion-card-section,
+.enforcement-section,
+.Double-marquee,
+.horizontal-words-section,
+.mandat-footer {
+    min-height: 100vh;
+    min-height: 100svh;
+}
+
+/* Each section centres its own content rather than padding from the top, so a
+   short section sits in the middle of the screen instead of clinging to the
+   header. */
+.motion-card-section,
+.enforcement-section,
+.Double-marquee {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* ─── Scene 1: four commit states in a readable row ─────────────────────────
+   The source arranged these as a fanned stack of square photographs: negative
+   margins and offsets of -2rem to -3.5rem, each card overlapping the next. That
+   geometry hides roughly a third of any card behind its neighbour, which is
+   survivable for a photo and fatal for text -- the third card's description was
+   being printed over by the second. They are a plain row here.
+
+   The inertia is untouched. The card still leans towards the cursor and flings
+   back when the pointer leaves; only the arrangement changed.
+───────────────────────────────────────────────────────────────────────────── */
+.motion-card__cards {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.1rem;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    align-items: stretch;
+}
+
+/* 17vw x 22vw, the size of a square photograph in the source. In a grid cell
+   that leaves a 615px row holding four 125px cards and 440px of nothing, so
+   the cards are given their column and their height comes from the text. */
+.motion-card__card {
+    width: auto;
+    height: auto;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+/* Overrides the fan: no offsets, no forced overlap, no rotation at rest. */
+.motion-card__card--1,
+.motion-card__card--2,
+.motion-card__card--3,
+.motion-card__card--4 {
+    left: auto;
+    bottom: auto;
+    margin-right: 0;
+    transform: none;
+    z-index: auto;
+}
+
+.motion-card__card {
+    cursor: url('/assets/Cursor SVG/cursor-text.svg') 12 12, pointer;
+}
+
+/* The card interior in the source wrapped a full-bleed photograph. Ours is
+   text, so it has to be allowed to size itself and to breathe. */
+.motion-card__card-image {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+}
+
+/* The labels used to be positioned over the card area, which put three phrases
+   on top of the text they were meant to introduce. They sit below instead.
+
+   The container override is not enough on its own: each label carries
+   position:absolute and a translate(-50%,-50%) of its own, so the individual
+   selector has to be reset too or the phrases keep floating over the cards. */
+.motion-card__floating-labels,
+.motion-card__floating-label {
+    position: static;
+    transform: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+    margin: 1.75rem auto 0;
+    width: 100%;
+    max-width: 1200px;
+}
+
+.motion-card__footer-text {
+    margin: 2rem auto 0;
+    padding: 0;
+    max-width: 52ch;
+    text-align: center;
+}
+
+.motion-card__description {
+    color: var(--text-secondary);
+}
+
+/* ─── Scene 2: four enforcement cards, all visible at once ──────────────────
+   .cards-wrapper is a flex row of 650px, and the cards are absolutely placed,
+   so the fourth sat behind the third and there was no scroll or hover that
+   would have revealed it. A grid: four across, two on a tablet, one on a phone.
+   The fan-out on hover is kept and does the rest.
+───────────────────────────────────────────────────────────────────────────── */
+.cards-wrapper {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.1rem;
+    height: auto !important;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-bottom: 0 !important;
+    align-items: start;
+}
+/* The !important above is not paranoia. responsive.css ends with
+   `.cards-wrapper { display: block !important }`, written for a layout where
+   GSAP positioned the cards absolutely on a phone, and it is imported last so
+   it outranks anything here. Left alone, the grid was silently reverted to a
+   block and the four cards stacked into a 1680px column. */
+
+/* The cards are absolutely placed in the source, positioned by hand. Inside a
+   grid cell that fights the layout, so placement is handed back to the flow. */
+.cards-wrapper .card {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    bottom: auto !important;
+    transform: none;
+}
+
+/* The card area carries a fixed 550px from the source, sized to hold a row of
+   tilted photographs. A grid row sizes itself. */
+.motion-card__cards-area {
+    height: auto;
+    min-height: 0;
+    margin: 1.5rem auto;
+    max-width: 1200px;
+}
+
+.card-title {
+    color: var(--color-dark);
+}
+
+.card-list {
+    color: var(--color-dark);
+}
+
+.enforcement-section .title-container {
+    display: block;
+    margin: 0 auto 2.25rem;
+    text-align: center;
+}
+
+.enforcement-section .title-underline-svg {
+    position: static;
+    display: block;
+    margin: 0.6rem auto 0;
+}
+
+.enforcement-section .main-title {
+    color: var(--color-dark);
+}
+
+.evidence-strip {
+    margin: 2rem auto 0;
+    max-width: 1200px;
+}
+
+/* ─── Scene 3 ───────────────────────────────────────────────────────────────
+   The long closing paragraph was a third of this section's height and, at the
+   width the marquee leaves it, rendered one word per line down a narrow strip
+   beside the cards. It has been cut: the section says the same thing more
+   briefly in the column heading, and the detail lives in the footer.
+───────────────────────────────────────────────────────────────────────────── */
+.Double-marquee {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 3rem;
+    min-height: 100vh;
+    min-height: 100svh;
+}
+
+.marquee-left {
+    flex: 0 0 42%;
+}
+
+.marquee-left h2 {
+    color: var(--color-black);
+}
+
+.marquee-underline {
+    color: var(--color-black);
+}
+
+.marquee-right {
+    flex: 1 1 auto;
+    height: min(62vh, 560px);
+    min-height: 320px;
+}
+
+/* Cards hold a sentence now, not a logo, so the box grows with the text and
+   stops clipping the longer lines. */
+.marquee-item {
+    width: 100%;
+    height: auto;
+    min-height: 120px;
+    padding: 1rem 1.25rem;
+    border-radius: 16px;
+}
+
+.marquee-logo--text span {
+    font-family: 'Epilogue', sans-serif;
+    font-size: clamp(1rem, 1.5vw, 1.35rem);
+    font-weight: 600;
+    line-height: 1.3;
+    text-align: center;
+    white-space: normal;
+    color: #1a1a1a;
+    padding: 0;
+}
+
+/* ─── Scene 4 ──────────────────────────────────────────────────────────────
+   The lamp card ran to 1136px inside an 844px section: a 320px rig, a four-row
+   list and three counters stacked in one column, which is more than a screen
+   of the same thing. Two columns, so the rig and the numbers can be read
+   together without scrolling past one to reach the other.
+───────────────────────────────────────────────────────────────────────────── */
+.horizontal-words-section {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.horizontal-words__relative {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto 1.5rem;
+}
+
+.lamps-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+        'head    side'
+        'rig     side'
+        'facts   side';
+    gap: 0 2.5rem;
+    align-content: start;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.75rem;
+}
+
+.lamps-head { grid-area: head; }
+.commit-lamps { grid-area: rig; }
+.lamps-blurb { grid-area: rig; margin-bottom: 0.75rem; }
+.feed-facts { grid-area: facts; margin-top: 1rem; }
+.commit-lamps-fallback { grid-area: side; margin: 0; }
+
+/* The states become controls: each row says what it is and what happened, and
+   selecting one explains it. Without this the sequence had to be read off a
+   scrolling word, which is not a thing anyone can do. */
+.commit-lamps-fallback li {
+    cursor: pointer;
+    text-align: left;
+    background: none;
+    border: none;
+    width: 100%;
+    font: inherit;
+    color: inherit;
+}
+
+.commit-lamps-fallback li:focus-visible {
+    outline: 2px solid var(--color-green);
+    outline-offset: 2px;
+}
+
+.state-detail {
+    grid-area: side;
+    align-self: end;
+    margin: 1rem 0 0;
+    padding: 0.9rem 1rem;
+    border-radius: 12px;
+    background: var(--color-black-deep);
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    min-height: 4.5rem;
+}
+
+/* ─── Tablet and phone ────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+    .motion-card__cards,
+    .cards-wrapper {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .lamps-card {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            'head'
+            'rig'
+            'side'
+            'facts';
+        gap: 0;
+    }
+
+    .state-detail {
+        grid-area: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .motion-card__cards,
+    .cards-wrapper {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .Double-marquee {
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .marquee-left {
+        flex: 1 1 auto;
+    }
+
+    .marquee-right {
+        height: 340px;
+        min-height: 0;
+    }
+}
+
+/* ─── Footer: the package names ──────────────────────────────────────────── */
+.footer-packages {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2rem;
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* ─── Short viewports ───────────────────────────────────────────────────────
+   A laptop screen is about 700px tall, and the padding that reads as generous
+   on a 27-inch display is most of a screen there. Padding, gaps and the closing
+   paragraph's measure tighten so the same four ideas still fit one page --
+   the content gives way, not the height.
+───────────────────────────────────────────────────────────────────────────── */
+@media (min-height: 500px) and (max-height: 820px) {
+    .motion-card-section,
+    .enforcement-section {
+        padding-top: 7vh;
+        padding-bottom: 7vh;
+    }
+
+    .motion-card__heading {
+        margin-bottom: 1.5rem;
+    }
+
+    .motion-card__title {
+        font-size: clamp(2rem, 5vw, 3.4rem);
+    }
+
+    .motion-card__subtitle {
+        font-size: clamp(1.1rem, 2.4vw, 1.6rem);
+        margin-top: 0.75rem;
+    }
+
+    /* A 52ch measure wraps the closing paragraph onto five lines. Wider, it is
+       two, which is the difference between fitting and not. */
+    .motion-card__footer-text {
+        max-width: 96ch;
+        margin-top: 1.25rem;
+    }
+
+    .motion-card__description {
+        font-size: 0.95rem;
+        line-height: 1.45;
+    }
+
+    .motion-card__floating-labels {
+        margin-top: 1rem;
+    }
+
+    .enforcement-section .title-container {
+        margin-bottom: 1.25rem;
+    }
+
+    .main-title {
+        font-size: clamp(1.8rem, 3.6vw, 3rem);
+    }
+
+    .card-list {
+        font-size: 0.88rem;
+    }
+
+    .card-title {
+        font-size: 1.5rem;
+    }
+
+    .evidence-strip {
+        margin-top: 1.25rem;
+    }
+
+    .lamps-card {
+        padding: 1.25rem;
+    }
+
+    .commit-lamps {
+        height: 200px;
+    }
+
+    .state-detail {
+        min-height: 0;
+        margin-top: 0.75rem;
+    }
+}
+
+/* ─── Containing the overflow, section by section ───────────────────────────
+   Two things start outside the viewport on purpose: the enforcement cards,
+   which slide in from the right, and the word scroll, which enters from
+   off-screen right. Both would otherwise make the page scrollable sideways.
+
+   Clipping happens here rather than on <html> because ScrollTrigger pins the
+   finality section with position:fixed, and a root with clipped overflow cuts
+   that off -- the pin then does nothing at all while still looking configured.
+   `clip` rather than `hidden` on the same grounds: hidden would make each of
+   these a scroll container and break sticky positioning inside them.
+───────────────────────────────────────────────────────────────────────────── */
+.enforcement-section,
+.horizontal-words-section,
+.motion-card-section {
+    overflow-x: clip;
+}

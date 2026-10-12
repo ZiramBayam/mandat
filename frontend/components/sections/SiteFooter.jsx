@@ -9,7 +9,7 @@
  * than hidden behind a hover.
  */
 
-import { EVIDENCE, FINALITY, FOOTER_LINKS } from '@/lib/content';
+import { EVIDENCE, FINALITY, FOOTER_LINKS, PACKAGES } from '@/lib/content';
 
 export default function SiteFooter() {
     return (
@@ -57,6 +57,15 @@ export default function SiteFooter() {
                         </dd>
                     </div>
                 </dl>
+
+                {/* The package names used to run through the marquee, where
+                    they read as a build log and did not fit the boxes. Being read
+                    is the whole point of a footer. */}
+                <ul className="footer-packages">
+                    {PACKAGES.map((name) => (
+                        <li key={name}>{name}</li>
+                    ))}
+                </ul>
 
                 <nav className="footer-links" aria-label="Elsewhere">
                     {FOOTER_LINKS.map((link) => (

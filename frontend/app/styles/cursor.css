@@ -31,7 +31,9 @@
     left: 50%;
     width: min(90vw, 1100px);
     height: auto;
-    transform: translate(-50%, -50%) scale(0.7);
+    /* Centring only. The scale belongs to the animation -- when both set it,
+       the word came out at 0.49x and sat small in the middle of the screen. */
+    transform: translate(-50%, -50%);
     transform-origin: center;
     z-index: 9999;
     pointer-events: none;

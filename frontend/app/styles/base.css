@@ -38,41 +38,48 @@
 ────────────────────────────────────────────────────────────────────────────── */
 :root {
     /* Accent: authority is live. Used for links, the logo, focus rings. */
-    --color-green: #4ade9b;
-    --color-lightblue: #7fb2ff;
-    --color-darkblue: #2b6fd4;
-    --color-lightgreen: #b9f2d4;
-    --color-orange: #f0a35e;
-    --color-maroon: #e0698c;
-    --color-pink: #c9a6ff;
+    --color-green: #29725f;
+    --color-lightblue: #82a0ff;
+    --color-darkblue: #4b69f0;
+    --color-lightgreen: #e6fab9;
+    --color-orange: #f5693c;
+    --color-maroon: #a0325a;
+    --color-pink: #f0befa;
 
-    /* Surfaces */
-    --bg-color: #0b0e13;
-    --color-white: #f2f5f8;
+    /* Surfaces. Light. The source site was a cream-and-orange agency page and
+       the section CSS that came across with it was written for exactly that,
+       so the palette is the source's rather than a dark inversion of it. The
+       values below are the source's; what changed is only that they now read
+       as deliberate rather than as leftover. */
+    --bg-color: #f0ebe6;
+    --color-white: #ffffff;
     --color-black: #000000;
-    --color-dark: #e6ebf2;
-    --color-black-soft: #12161d;
-    --color-black-deep: #070910;
+    --color-dark: #1a1a1a;
+    --color-black-soft: #ffffff;
+    --color-black-deep: #e7e1db;
 
-    --text-primary: #f2f5f8;
-    --text-secondary: #9aa7b8;
-    --text-muted: #6b7889;
-    --border-subtle: #1e2530;
-    --border-strong: #2c3543;
+    --text-primary: #1a1a1a;
+    --text-secondary: #5c5651;
+    --text-muted: #8a837c;
+    --border-subtle: #ddd5cd;
+    --border-strong: #c4bab0;
 
     /* Outcome colours. Reused by the chain, so they must stay consistent across
-       every package that reports a result. */
-    --ok: #4ade9b;
-    --fail: #ff7b72;
-    --unknown: #8b949e;
+       every package that reports a result. Darkened from the dark-theme values:
+       the originals were tuned to sit on near-black and wash out on cream. */
+    --ok: #1f7a4d;
+    --fail: #b3341f;
+    --unknown: #7d766f;
 
     /* The four commit states. Progress reads left to right as increasing
-       luminance, so the sequence survives greyscale and the common forms of
-       colour vision deficiency even before the shape markers are considered. */
-    --commit-proposed: #6b7889;
-    --commit-voted: #d9a441;
-    --commit-finalized: #4fb477;
-    --commit-verified: #4aa3f0;
+       darkness, so the sequence survives greyscale and the common forms of
+       colour vision deficiency even before the shape markers are considered.
+       That is why the ramp is inverted from a dark theme, where it ran the
+       other way to get the same ordering. */
+    --commit-proposed: #a89f96;
+    --commit-voted: #b8860b;
+    --commit-finalized: #2f855a;
+    --commit-verified: #2b6cb0;
 }
 
 /* ─── Reset ─────────────────────────────────────────────────────────────────── */
@@ -114,13 +121,16 @@ body {
 html {
     scrollbar-width: none;
     -ms-overflow-style: none;
-    /* Sections that slide in from off-screen right -- the enforcement cards and
-       the pinned word scroll -- start outside the viewport. body already hides
-       its own overflow, but that does not stop the page from being scrollable
-       sideways when the root element is not also clipped. `clip` rather than
-       `hidden`: hidden would make html a scroll container and break the sticky
-       positioning Lenis relies on. */
-    overflow-x: clip;
+    /* Deliberately NOT clipped here.
+       The enforcement cards and the word scroll both begin outside the viewport,
+       so something has to contain them, and clipping the root element was the
+       obvious place to put it. It also stops ScrollTrigger pinning the last
+       section: pinning fixes the element in place, and a clipped or hidden root
+       cuts that off. The pin reported itself as configured, left a pin-spacer
+       behind, and moved the section anyway.
+
+       The overflow is contained per-section instead -- see sections.css. The root
+       is left scrollable, which is what pinning needs. */
 }
 
 html::-webkit-scrollbar,

@@ -74,6 +74,7 @@ export default function AgentSection() {
                         {AGENT.title[1]}
                         <span className="text-with">.</span>
                     </h2>
+                    <p className="marquee-subtitle">{AGENT.marqueeLabel}</p>
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="marquee-underline"
@@ -88,7 +89,6 @@ export default function AgentSection() {
                             strokeLinejoin="round"
                         />
                     </svg>
-                    <p className="marquee-subtitle">{AGENT.subtitle}</p>
                 </div>
 
                 <div className="marquee-blob-container">
@@ -140,9 +140,6 @@ export default function AgentSection() {
                 ))}
             </div>
 
-            <div className="agent-closing">
-                <p>{AGENT.closing}</p>
-            </div>
         </section>
     );
 }

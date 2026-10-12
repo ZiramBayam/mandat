@@ -121,11 +121,26 @@ export default function TransitionScribble() {
         };
 
         trigger.addEventListener('click', runScribbleAnimation);
-        const timer = setTimeout(() => runScribbleAnimation(null), 100);
+
+        // Play once on arrival, but not on a timer. At 100ms the font had often
+        // not loaded, so the word rendered in the fallback and the whole
+        // animation was spent on text nobody was reading yet. Waiting for the
+        // face, then pausing a beat, puts it somewhere it can actually be seen.
+        let started = false;
+        const play = () => {
+            if (started) return;
+            started = true;
+            runScribbleAnimation(null);
+        };
+        const fonts = document.fonts;
+        const ready = fonts?.ready ? fonts.ready : Promise.resolve();
+        ready
+            .then(() => new Promise((r) => setTimeout(r, 700)))
+            .then(play)
+            .catch(play);
 
         return () => {
             trigger.removeEventListener('click', runScribbleAnimation);
-            clearTimeout(timer);
         };
     }, []);
 

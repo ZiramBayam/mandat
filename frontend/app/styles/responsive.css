@@ -89,24 +89,16 @@
     margin-bottom: 50px;
   }
 
-  /* ── Cards (GSAP-controlled) ─────── */
+  /* ── Cards ──────────────────────────
+     The wrapper used to be forced to display:block !important here, for a
+     layout where GSAP positioned each card absolutely on a phone. That layout
+     is gone; the cards are a grid. Because this file is imported last, an
+     !important here outranked the grid by source order and silently reverted it
+     -- the four cards stacked into a 1680px column that no amount of scrolling
+     or hovering could open. Width is left to the grid.
+  */
   .cards-wrapper {
-    position: relative !important;
-    display: block !important;
-    width: 100% !important;
-    margin: 0 auto !important;
-    overflow: visible !important;
-  }
-
-  .card {
-    width: 82vw;
-    max-width: 340px;
-    min-height: 420px;
-    height: auto;
-  }
-
-  .card-sticker {
-    pointer-events: none;
+    overflow: visible;
   }
 
   /* ── Double Marquee ─────────────── */

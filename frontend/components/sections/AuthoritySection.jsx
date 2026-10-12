@@ -21,6 +21,11 @@ export default function AuthoritySection() {
     const sectionRef = useRef(null);
 
     useEffect(() => {
+        // Same reason as the word sweep: without ScrollTrigger the entrance
+        // timeline never runs, and the cards would be left at the +160px offset
+        // they were parked at, so the section would open on an unexplained gap.
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
         const ctx = gsap.context(() => {
             // The cards follow the cursor and fling back on leave. Copied from
             // the source site's feel; the numbers are ours because a card that

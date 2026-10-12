@@ -91,7 +91,23 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
     gsap.ticker.add(tick);
     gsap.ticker.lagSmoothing(0);
 
+    // ScrollTrigger records where every trigger starts and ends once, when the
+    // trigger is created. The sections on this page create theirs from an effect
+    // that runs while the font is still loading and before four 100svh sections
+    // have settled, so the positions it stores describe a layout that no longer
+    // exists. Every trigger then sits in a range the page is never in, and
+    // nothing scrolls -- verified: the authority cards were still parked at
+    // their initial offset and the word sweep never left its start frame.
+    //
+    // Refreshing once the fonts are in and the document has laid out re-measures
+    // all of it against the real geometry.
+    const refresh = () => ScrollTrigger.refresh();
+    const fonts: FontFaceSet | undefined = document.fonts;
+    fonts?.ready?.then(refresh).catch(() => {});
+    window.addEventListener('load', refresh);
+
     return () => {
+      window.removeEventListener('load', refresh);
       gsap.ticker.remove(tick);
       lenis.off('scroll', onScroll);
       lenis.destroy();
