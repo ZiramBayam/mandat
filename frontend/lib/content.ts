@@ -49,10 +49,9 @@ export const AUTHORITY = {
     subtitle: 'capped, revocable, and checked by a contract.',
     labels: ['it gets an allowance, not a key', 'the limit is not the money', 'asked, agreed, done'],
     closing:
-        'An AI agent is usually given a wallet, and then trusted. This gives it ' +
-        'an allowance instead: how much, how often, for how long, and who can ' +
-        'take it back. The rules are not written in a prompt the model could ' +
-        'ignore — they sit in a contract that refuses the call.',
+        'An agent is usually handed a wallet and trusted with it. This hands it ' +
+        'an allowance instead — how much, how often, until when, and who can ' +
+        'take it back.',
 } as const;
 
 /**

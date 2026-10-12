@@ -141,10 +141,9 @@ export default function AuthoritySection() {
                 <div className="motion-card__cards">
                     {COMMIT_STATES.map((state, i) => (
                         <div key={state.key} className={`motion-card__card motion-card__card--${i + 1}`}>
-                            <div className={`commit-card commit-card--${state.key}`}>
+                            <div className={`motion-card__card-image commit-panel commit-panel--${state.key}`}>
                                 <span className="commit-card__marker" aria-hidden="true" />
                                 <h3 className="commit-card__title">{state.label}</h3>
-                                <p className="commit-card__blurb">{state.blurb}</p>
                             </div>
                         </div>
                     ))}

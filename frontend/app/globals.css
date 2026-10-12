@@ -16,6 +16,10 @@
 /* Fonts, tokens, reset          */
 @import './styles/navbar.css';
 /* Navbar, logo, header          */
+@import './styles/hero.css';
+/* Scene headings — the source's own file, 40 lines */
+@import './styles/vimeo-hero.css';
+/* The opening */
 @import './styles/motion-cards.css';
 /* Scene 1 — the four commit states, on inertia */
 @import './styles/cards.css';
@@ -26,7 +30,7 @@
 /* Scene 4 — the scrolling commit-state words */
 @import './styles/footer.css';
 /* Site footer                   */
-@import './styles/sections.css';
+@import './styles/mandat.css';
 /* Our own component styling         */
 @import './styles/lamps.css';
 /* Scene 4 — the live lamp rig        */

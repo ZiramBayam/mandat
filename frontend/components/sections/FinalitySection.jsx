@@ -21,18 +21,13 @@
  * they are now controls: select one and it explains itself in words. The
  * animation is the garnish; the content does not depend on it.
  *
- * The lamps are unchanged and still ours -- a live WebSocket on monadNewHeads
- * driving four R3F bulbs, with a text list beside them for when WebGL is not
- * available. Nothing here is mocked. If the socket is down the page says so
- * rather than playing a reassuring animation.
+ * The lamps moved out of this section into LiveFeed, into the slot the source
+ * site left unfinished.
  */
 
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import dynamic from 'next/dynamic';
-import { useEffect, useRef, useState } from 'react';
-import { useCommitFeed } from '@/lib/chain';
-import { COMMIT_STATES as RIG_STATES } from '@/lib/motion/rig';
+import { useEffect, useRef } from 'react';
 import { COMMIT_STATES, FINALITY } from '@/lib/content';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -54,15 +49,8 @@ gsap.registerPlugin(ScrollTrigger);
  */
 const RUNWAY = 1400;
 
-const CommitLamps = dynamic(() => import('@/lib/motion/CommitLamps').then((m) => m.CommitLamps), {
-    ssr: false,
-    loading: () => <div className="commit-lamps is-loading" />,
-});
-
 export default function FinalitySection() {
-    const feed = useCommitFeed();
     const sectionRef = useRef(null);
-    const [selected, setSelected] = useState(null);
 
     useEffect(() => {
         // Under reduced motion there is no Lenis and nothing drives
@@ -116,12 +104,9 @@ export default function FinalitySection() {
         return () => ctx.revert();
     }, []);
 
-    const reached = feed.lastCommitState;
-    const detail = COMMIT_STATES.find((s) => s.key === selected);
-
     return (
         <>
-        <section ref={sectionRef} className="horizontal-words-section content-section" id="finality">
+        <section ref={sectionRef} className="horizontal-words-section" id="finality">
             <div className="horizontal-words__relative">
                 <div className="horizontal-words__sticker-svg">
                     <svg
@@ -189,62 +174,6 @@ export default function FinalitySection() {
                 </h2>
             </div>
 
-            <div className="card card-wide lamps-card">
-                <div className="lamps-head">
-                    <h3>{FINALITY.lampsLabel}</h3>
-                    <p className={feed.connected ? 'feed-status is-live' : 'feed-status is-down'}>
-                        {feed.connected ? 'connected to monadNewHeads' : 'not connected'}
-                    </p>
-                </div>
-                <p className="lamps-blurb">{FINALITY.lampsBlurb}</p>
-
-                <CommitLamps reached={reached} connected={feed.connected} />
-
-                {/* Every state, readable, and selectable. */}
-                <ul className="commit-lamps-fallback">
-                    {RIG_STATES.map((state, i) => {
-                        const meta = COMMIT_STATES[i];
-                        const lit = feed.connected && reached !== null && RIG_STATES.indexOf(reached) >= i;
-                        const isSelected = selected === meta.key;
-                        return (
-                            <li key={state}>
-                                <button
-                                    type="button"
-                                    className={lit ? 'is-lit' : ''}
-                                    data-state={state}
-                                    aria-pressed={isSelected}
-                                    onClick={() => setSelected(isSelected ? null : meta.key)}
-                                >
-                                <span className="lamp-dot" aria-hidden="true" />
-                                <span className="lamp-name">{meta.label}</span>
-                                <span className="lamp-status">
-                                    {!feed.connected ? 'unknown' : lit ? 'reached' : 'pending'}
-                                </span>
-                                </button>
-                            </li>
-                        );
-                    })}
-                </ul>
-
-                <p className="state-detail" aria-live="polite">
-                    {detail ? detail.blurb : 'Pick a step above to see what it means.'}
-                </p>
-
-                <dl className="feed-facts">
-                    <div>
-                        <dt>blocks seen</dt>
-                        <dd>{feed.heads.toString()}</dd>
-                    </div>
-                    <div>
-                        <dt>final floor</dt>
-                        <dd>{feed.finalFloor.toString()}</dd>
-                    </div>
-                    <div>
-                        <dt>last state</dt>
-                        <dd>{reached ?? 'unknown'}</dd>
-                    </div>
-                </dl>
-            </div>
         </section>
 
         {/* Scroll runway. Not visible and not styled -- it exists so the pin

@@ -32,6 +32,15 @@ export default function EnforcementSection() {
     const rootRef = useRef(null);
 
     useEffect(() => {
+        // Listener teardown collected here rather than through ctx.add().
+        // gsap.context() invokes its callback synchronously, so a reference to
+        // `ctx` inside that callback is read before the const has been assigned
+        // -- a temporal dead zone ReferenceError that throws on the client and
+        // takes the section down with it. Nothing about it shows up in a build
+        // or in server rendering; it only fails once the effect runs in a
+        // browser.
+        const detach = [];
+
         const ctx = gsap.context(() => {
             const cards = gsap.utils.toArray('.cards-wrapper .card');
             if (cards.length === 0) return;
@@ -110,14 +119,17 @@ export default function EnforcementSection() {
 
                 card.addEventListener('mouseenter', onEnter);
                 card.addEventListener('mouseleave', onLeave);
-                ctx.add(() => {
+                detach.push(() => {
                     card.removeEventListener('mouseenter', onEnter);
                     card.removeEventListener('mouseleave', onLeave);
                 });
             });
         }, rootRef);
 
-        return () => ctx.revert();
+        return () => {
+            detach.forEach((fn) => fn());
+            ctx.revert();
+        };
     }, []);
 
     return (

@@ -342,3 +342,12 @@
     width: 130px;
     transform: rotate(5deg);
 }
+/* The source's footer wordmark was an <svg> holding a vector path of the
+   agency's name. Ours is the name as text, in the same script font used by the
+   header and the scribble, so it scales with the font and needs no artwork. */
+.footer-big-text {
+    font-family: 'Satisfy', cursive;
+    font-size: clamp(5rem, 18vw, 16rem);
+    line-height: 0.9;
+    color: var(--color-dark);
+}

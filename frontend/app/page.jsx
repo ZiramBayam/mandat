@@ -1,30 +1,35 @@
 'use client';
 
 /**
- * Mandat — four scenes, one page.
+ * Mandat — the page, in the source site's section order.
  *
- *   1 Authority    the permission that was minted, and the four states it passes through
- *   2 Enforcement what the contract refuses to do
- *   3 Agent        an LLM reading its own cap and choosing a tier
- *   4 Finality     commitState lamps driven by a live WebSocket
+ *   Navbar + hero          the opening
+ *   HorizontalWords        the four states, swept across the screen
+ *   MotionCards            the fanned cards
+ *   Showreel slot          the live commit feed
+ *   ServiceCards           the fanned enforcement cards
+ *   DoubleMarquee          what the system does
+ *   Footer
  *
- * The animation layer, the layout vocabulary and the section shells came from a
- * credited third-party agency site (see README). What renders here is ours: every
- * word is in lib/content.ts, and every value that is chain state is read from
- * Monad at runtime rather than asserted by the page (working/constraints.md R6).
+ * The order, the wrappers and the class names come from the credited site (see
+ * README). What is ours is the words and the data: every value that is chain
+ * state is read from Monad at runtime rather than asserted by the page
+ * (working/constraints.md R6).
  */
 
 import SvgSymbols from '@/components/SvgSymbols';
 import Navbar from '@/components/Navbar';
+import VimeoHero from '@/components/VimeoHero';
 import { SmoothScroll } from '@/lib/motion';
 import CursorBubble from '@/components/CursorBubble';
 import TransitionScribble from '@/components/TransitionScribble';
 
+import FinalitySection from '@/components/sections/FinalitySection';
 import AuthoritySection from '@/components/sections/AuthoritySection';
+import LiveFeed from '@/components/sections/LiveFeed';
 import EnforcementSection from '@/components/sections/EnforcementSection';
 import AgentSection from '@/components/sections/AgentSection';
-import FinalitySection from '@/components/sections/FinalitySection';
-import SiteFooter from '@/components/sections/SiteFooter';
+import Footer from '@/components/Footer';
 
 export default function Home() {
     return (
@@ -34,14 +39,24 @@ export default function Home() {
             <CursorBubble />
             <header className="main-header">
                 <Navbar />
+                <VimeoHero />
             </header>
+            <FinalitySection />
             <main>
-                <AuthoritySection />
-                <EnforcementSection />
-                <AgentSection />
-                <FinalitySection />
-                <SiteFooter />
+                <div className="content-section motion-cards-wrapper">
+                    <AuthoritySection />
+                </div>
+                <LiveFeed />
+                <div className="content-section service-cards-wrapper">
+                    <EnforcementSection />
+                </div>
             </main>
+            <section className="Double-marquee">
+                <AgentSection />
+            </section>
+            <footer className="main-footer">
+                <Footer />
+            </footer>
             <TransitionScribble />
         </>
     );
