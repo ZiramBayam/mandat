@@ -148,21 +148,34 @@
    longer and monospaced, so the cell centres a word instead of fitting a
    raster image into a fixed box.
 ───────────────────────────────────────────────────────────────────────────── */
+/* The source's marquee cells are 90% wide and 240px tall with a square logo
+   centred and clipped. Ours holds a sentence, so the text wraps instead of
+   overflowing into the next cell, and the cell grows to fit it. */
+.marquee-item {
+    width: 88%;
+    height: auto;
+    min-height: 190px;
+    padding: 1.25rem 1.5rem;
+}
+
 .marquee-logo--text {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 100%;
-    height: 100%;
+    height: auto;
 }
 
 .marquee-logo--text span {
-    font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
-    font-size: clamp(0.85rem, 1.6vw, 1.15rem);
+    font-family: 'Epilogue', sans-serif;
+    font-size: clamp(0.95rem, 1.15vw, 1.2rem);
     font-weight: 600;
-    color: var(--color-black-deep);
-    white-space: nowrap;
-    padding: 0 1rem;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    color: #1a1a1a;
+    text-align: center;
+    white-space: normal;
+    padding: 0;
 }
 
 .marquee-subtitle {
@@ -208,40 +221,6 @@
 }
 
 
-/* ─── One section, one screen ────────────────────────────────────────────────
-   The brief was that opening the hero should not show the next section's words
-   below it, so each section is exactly one viewport tall and clips whatever
-   would otherwise spill.
-
-   100svh, not 100vh: on a phone 100vh is measured with the browser's URL bar
-   retracted, so the section is taller than the screen the moment the bar slides
-   back. `clip` rather than `hidden` -- hidden would make each section a scroll
-   container and break the sticky positioning the pinned word scroll depends on.
-───────────────────────────────────────────────────────────────────────────── */
-.vimeo-hero,
-.horizontal-words-section,
-.content-section,
-.Double-marquee,
-.main-footer {
-    height: 100vh;
-    height: 100svh;
-    overflow: clip;
-}
-
-/* The source pads its content sections by 200px, which is more than a third of
-   a laptop screen and leaves the card area squeezed. Viewport-relative instead,
-   so the rhythm is the same at any size and still leaves room for the layout. */
-.content-section {
-    padding: 6svh 20px 0;
-}
-
-/* The hero is already 100vh minus a margin in the source; the rules above make
-   it exact and clip it. */
-.vimeo-hero {
-    width: calc(100% - 24px);
-    height: calc(100svh - 24px);
-}
-
 /* ─── Scene 1: the fanned cards ─────────────────────────────────────────────
    The source fans four square cards across the viewport, each rotated and
    overlapping the next, and fills them with photographs. Ours keeps the fan
@@ -253,7 +232,10 @@
 .commit-panel {
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
+    /* Top, not bottom: the source floats three sticker labels over the middle
+       of the card, at 31%, 46% and 69% of its height. Text at the bottom would
+       sit underneath the third one. */
+    justify-content: flex-start;
     gap: 0.75rem;
     padding: 1.5rem;
     color: #1a1a1a;
@@ -332,92 +314,12 @@
     }
 }
 
-/* ─── Type scale only ───────────────────────────────────────────────────────
-   Two headings in the source are fixed at 7rem and 7.5rem, sized for a 1440px
-   viewport. At 717px they render four and six lines respectively and take
-   1093px of a 609px screen -- the whole section is the heading. clamp() leaves
-   the large-screen result untouched, so the layout they were designed for still
-   gets exactly what it was designed for.
-
-   This is a type fix, not a layout one: the fanned cards below are untouched.
-───────────────────────────────────────────────────────────────────────────── */
-.motion-card__title {
-    font-size: clamp(2rem, 5.4vw, 7rem);
-    letter-spacing: -0.045em;
-}
-
-.motion-card__subtitle {
-    font-size: clamp(1.15rem, 2.8vw, 7.5rem);
-    letter-spacing: -0.02em;
-    /* The source pulls its subtitle up 30px to tuck it beside a sticker. There
-       is no sticker here, so that offset just prints the two over each other. */
-    top: 0;
-}
-
-.main-title {
-    font-size: clamp(1.8rem, 4.8vw, 6rem);
-    letter-spacing: -0.04em;
-}
-
-/* ─── Scene 2: the cards ──────────────────────────────────────────────────
-   .cards-wrapper is a fixed 650px tall because in the source it holds absolutely
-   positioned cards that a script fans out. Below 768px the source switches to a
-   different arrangement driven by a pinned scroll, which is not part of this
-   page -- so the height is released and the cards flow, rather than leaving a
-   650px box with four cards stacked through it.
-───────────────────────────────────────────────────────────────────────────── */
-.cards-wrapper {
-    height: auto;
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-.cards-wrapper .card {
-    position: relative;
-    top: auto;
-    left: auto;
-    bottom: auto;
-}
-
-.evidence-strip {
-    margin: 2rem auto 0;
-    max-width: 1200px;
-}
-
-/* 80px of fixed space under the heading, from the source. Same treatment as
-   the card area: the source's value wherever it fits, less where it does not. */
-.title-container {
-    margin-bottom: min(80px, 6svh);
-}
-
-/* The card area is a fixed 550px in the source, which is most of a short
-   screen. min() keeps the source's height wherever there is room for it and
-   gives the rest back where there is not. */
-.motion-card__cards-area {
-    height: min(550px, 46svh);
-    margin: 2rem auto;
-}
-
-.motion-card__footer-text {
-    max-width: 96ch;
-    margin: 0 auto;
-    text-align: center;
-}
-
-.motion-card__description {
-    font-size: clamp(0.95rem, 1.5vw, 1.15rem);
-    line-height: 1.45;
-    color: var(--text-secondary);
-}
-
 /* ─── Hero colours ─────────────────────────────────────────────────────────
-   The fade is a scrim: black at 70% over the bottom of a video, so that white
-   type stays readable against moving footage. There is no video, so the scrim
-   just made a grey box with white words floating in it.
-
-   The hero now uses the page's own cream surface and the dark text colour, which
-   is what the rest of the section styles assume. The scrim is kept but lightened
-   to a hint of depth rather than removed, so the stickers still read against it.
+   The scrim is black at 70% over the bottom of a video, holding white type
+   readable against moving footage. There is no video -- the source's <video> has
+   no src either -- so the scrim just made a grey box with white words in it.
+   The hero uses the page's own surface and dark text instead, and the scrim is
+   lightened to a hint of depth so the stickers still read against it.
 ───────────────────────────────────────────────────────────────────────────── */
 .vimeo-hero {
     background-color: var(--color-white);

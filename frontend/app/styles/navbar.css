@@ -202,3 +202,22 @@
         display: none;
     }
 }
+
+/* Hide on scroll down, show on scroll up. Set by a class rather than an inline
+   transform so the CSS owns the motion. The 12px overshoot is deliberate: a bar
+   that slides exactly out of view leaves a sliver, and an ease on the way back
+   reads as a wobble otherwise. */
+.navbar {
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+}
+
+.navbar.is-hidden {
+    transform: translateY(calc(-100% - 12px));
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .navbar {
+        transition: none;
+    }
+}

@@ -74,6 +74,20 @@ export default function Navbar() {
         window.addEventListener('scroll', updateNavbarColor);
         updateNavbarColor();
 
+        /* Hide on the way down, bring it back on the way up.
+           Direction, not position: a header that only came back at the top of the
+           page would be useless for reading further down. A dead zone near the
+           very top keeps it from flickering when the page settles. */
+        let lastY = window.scrollY;
+        const updateNavbarVisibility = () => {
+            const y = Math.max(0, window.scrollY);
+            const delta = y - lastY;
+            if (Math.abs(delta) < 6) return;
+            navbar.classList.toggle('is-hidden', delta > 0 && y > 140);
+            lastY = y;
+        };
+        window.addEventListener('scroll', updateNavbarVisibility, { passive: true });
+
         // Wiggle on the wordmark
         const cleanups = [];
         const brand = document.querySelector('.nav-brand');
@@ -97,6 +111,7 @@ export default function Navbar() {
 
 
         return () => {
+            window.removeEventListener('scroll', updateNavbarVisibility);
             window.removeEventListener('scroll', updateNavbarColor);
             cleanups.forEach(fn => fn && fn());
         };
