@@ -1,0 +1,398 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   sections.css — the parts that are ours.
+
+   Everything here styles content this project introduced: the commit-state
+   cards, the evidence chips that link to the two G6 transactions, the text
+   variant of the marquee logo, and the footer's own columns.
+
+   The section shells themselves -- the inertia, the pinned scroll, the card
+   grid, the marquee columns -- are styled by the partials that came from the
+   credited site, and are not restated here. This file only fills the gaps the
+   rebrand opened up.
+───────────────────────────────────────────────────────────────────────────── */
+
+/* ─── Scene 1: the four commit states, standing in for four photographs ─────
+   The source section used stock photography. Four photos of an office would
+   have said nothing, and the sequence these cards actually show is the spine of
+   the system. Each card takes its colour from base.css --commit-*, so the
+   palette is defined once.
+───────────────────────────────────────────────────────────────────────────── */
+.commit-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    width: 100%;
+    height: 100%;
+    padding: 1.4rem;
+    border-radius: 18px;
+    background: var(--color-black-soft);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    text-align: left;
+}
+
+.commit-card__marker {
+    display: block;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    background: var(--marker, var(--text-muted));
+}
+
+.commit-card__title {
+    font-family: 'Epilogue', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.commit-card__blurb {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.commit-card--proposed {
+    --marker: var(--commit-proposed);
+}
+.commit-card--voted {
+    --marker: var(--commit-voted);
+}
+.commit-card--finalized {
+    --marker: var(--commit-finalized);
+}
+.commit-card--verified {
+    --marker: var(--commit-verified);
+}
+
+/* Marker shapes. The hue already separates the four, but hue alone fails for
+   roughly one reader in twelve, so each state also changes silhouette: square,
+   disc, triangle, ring. Same reason the fallback lamps do it. */
+.commit-card--proposed .commit-card__marker {
+    border-radius: 2px;
+}
+.commit-card--voted .commit-card__marker {
+    border-radius: 50%;
+}
+.commit-card--finalized .commit-card__marker {
+    border-radius: 2px;
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.commit-card--verified .commit-card__marker {
+    border-radius: 50%;
+    background: transparent;
+    box-shadow: inset 0 0 0 3px var(--marker);
+}
+
+/* ─── Scene 2: the two transactions, made clickable ─────────────────────────
+   A claim on a demo page is worth nothing unless the reader can check it. Both
+   chips open the explorer, so "the over-cap one reverted" can be verified in
+   one click instead of taken on faith.
+───────────────────────────────────────────────────────────────────────────── */
+.enforcement-section {
+    padding: 12vh 6vw;
+}
+
+.evidence-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+    margin-top: 2.5rem;
+    justify-content: center;
+}
+
+.evidence-chip {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.85rem 1.2rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle);
+    background: var(--color-black-soft);
+    text-decoration: none;
+    transition: border-color 0.25s ease, transform 0.25s ease;
+}
+
+.evidence-chip:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-strong);
+}
+
+.evidence-chip__label {
+    font-family: 'Epilogue', sans-serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.evidence-chip__value {
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    font-size: 0.82rem;
+    color: var(--text-primary);
+}
+
+.evidence-chip--pass .evidence-chip__label {
+    color: var(--ok);
+}
+
+.evidence-chip--fail .evidence-chip__label {
+    color: var(--fail);
+}
+
+/* ─── Scene 3: text instead of a logo image ─────────────────────────────────
+   The marquee columns ship client logos. Ours are package names, which are
+   longer and monospaced, so the cell centres a word instead of fitting a
+   raster image into a fixed box.
+───────────────────────────────────────────────────────────────────────────── */
+.marquee-logo--text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+.marquee-logo--text span {
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    font-size: clamp(0.85rem, 1.6vw, 1.15rem);
+    font-weight: 600;
+    color: var(--color-black-deep);
+    white-space: nowrap;
+    padding: 0 1rem;
+}
+
+.marquee-subtitle {
+    font-family: 'Epilogue', sans-serif;
+    font-size: clamp(1rem, 1.8vw, 1.3rem);
+    color: var(--text-secondary);
+    margin: 1rem 0 0;
+}
+
+.agent-closing {
+    grid-column: 1 / -1;
+    padding: 0 6vw 10vh;
+}
+
+.agent-closing p {
+    max-width: 46ch;
+    margin: 0;
+    font-size: clamp(1rem, 1.7vw, 1.25rem);
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+/* ─── Scene 4 ─────────────────────────────────────────────────────────────── */
+.lamps-blurb {
+    max-width: 52ch;
+    margin: 0.5rem 0 1.5rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+/* ─── Footer columns that the source footer did not have ──────────────────── */
+.mandat-footer .footer-lead {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.footer-title {
+    font-family: 'Epilogue', sans-serif;
+    font-size: clamp(1.8rem, 4.5vw, 3.2rem);
+    font-weight: 600;
+    line-height: 1.05;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.footer-title-accent {
+    color: var(--color-green);
+}
+
+.mandat-footer .footer-note {
+    max-width: 44ch;
+    color: var(--text-secondary);
+}
+
+.footer-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin: 2.5rem 0;
+}
+
+.footer-facts dt {
+    font-family: 'Epilogue', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+}
+
+.footer-facts dd {
+    margin: 0;
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    font-size: 0.95rem;
+}
+
+.footer-facts a {
+    color: var(--text-primary);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border-strong);
+    transition: color 0.25s ease, border-color 0.25s ease;
+}
+
+.footer-facts a:hover {
+    color: var(--color-green);
+    border-color: var(--color-green);
+}
+
+.footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.75rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.footer-link {
+    font-family: 'Epilogue', sans-serif;
+    font-size: 1rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: color 0.25s ease;
+}
+
+.footer-link:hover {
+    color: var(--color-green);
+}
+
+/* ─── Mobile ──────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+    .enforcement-section {
+        padding: 10vh 5vw;
+    }
+
+    .evidence-strip {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .evidence-chip {
+        border-radius: 18px;
+    }
+
+    .agent-closing {
+        padding: 0 5vw 8vh;
+    }
+
+    .footer-facts {
+        gap: 1.25rem;
+    }
+}
+
+/* ─── Reduced motion ────────────────────────────────────────────────────────
+   Same reasoning as the section partials: for someone who has asked for less
+   motion, the pinned horizontal scroll is the problem, so it is disabled
+   outright rather than shortened.
+───────────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    .commit-card,
+    .evidence-chip {
+        transition: none;
+    }
+
+    .evidence-chip:hover {
+        transform: none;
+    }
+}
+/* ─── Display type: made responsive ─────────────────────────────────────────
+   The section headings arrived at a fixed 6rem, 7rem and 7.5rem, sized for a
+   1440px-plus viewport. Below that they overflow their own container: at 717px
+   "a permission you can actually see." ran off the right edge and pushed the
+   card area out of view entirely. Fixed sizes are replaced with clamp() so the
+   same rule serves a 390px phone and a wide desktop.
+
+   The upper bounds are unchanged from the source, so on a large screen this
+   looks the way it was designed to look.
+───────────────────────────────────────────────────────────────────────────── */
+.motion-card__title {
+    font-size: clamp(2.4rem, 7.2vw, 7rem);
+    letter-spacing: -0.045em;
+}
+
+.motion-card__subtitle {
+    font-size: clamp(1.35rem, 4.2vw, 4.5rem);
+    letter-spacing: -0.02em;
+}
+
+.marquee-left h2 {
+    font-size: clamp(2rem, 4.4vw, 4rem);
+    letter-spacing: -0.03em;
+}
+
+.horizontal-words__h2 {
+    font-size: clamp(2.6rem, 9vw, 9rem);
+}
+
+/* ─── Scene 2 heading ────────────────────────────────────────────────────────
+   .main-title, .title-container and .title-underline-svg were defined in the
+   source site's hero.css, which this page does not use -- the hero was replaced
+   by scene 1. Without these the enforcement section's heading rendered as an
+   unstyled h2. Carried over here rather than pulling in a hero stylesheet that
+   would have brought its own unused rules.
+───────────────────────────────────────────────────────────────────────────── */
+.title-container {
+    margin-bottom: 80px;
+    position: relative;
+    display: inline-block;
+}
+
+.main-title {
+    font-size: clamp(2.2rem, 5.6vw, 6rem);
+    font-family: 'Epilogue', sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    color: var(--color-dark);
+    cursor: url('/assets/Cursor SVG/cursor-text.svg') 12 12, auto;
+}
+
+.italic-text {
+    font-family: 'Times New Roman', serif;
+    font-style: italic;
+    font-weight: 400;
+    margin-left: -0.08em;
+    color: var(--color-green);
+}
+
+.title-underline-svg {
+    position: absolute;
+    bottom: -15px;
+    right: 0;
+    width: clamp(90px, 14vw, 160px);
+    height: auto;
+    color: var(--color-dark);
+}
+
+.title-underline-svg path {
+    stroke-dasharray: 200;
+    stroke-dashoffset: 200;
+}
+
+/* ─── Heading overlap ───────────────────────────────────────────────────────
+   The source offset its subtitle with `top: -30px`, because there it tucked
+   under the title next to a sticker. Our subtitle has no sticker, so that same
+   offset pulled it up and the two lines printed through each other: the title
+   bottom sat 30px below the subtitle's top. Removed, and replaced with real
+   margin so the pair reads as a block.
+───────────────────────────────────────────────────────────────────────────── */
+.motion-card__subtitle {
+    top: 0;
+    margin: 1.25rem 0 0;
+    max-width: 34ch;
+}

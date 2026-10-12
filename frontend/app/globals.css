@@ -1,21 +1,35 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    globals.css — Entry point.
 
-   The animation layer came from a credited third-party site (see README). The
-   partials kept are the ones the chrome still uses: base tokens, the navbar, the
-   cursor bubble, and the scribble page transition.
+   The animation layer and the layout vocabulary came from a credited
+   third-party site (see README). The colour values in base.css are ours: the
+   source was a cream-and-orange agency site, this is a dark page about a
+   permission system. The variable *names* are kept so the section rules that
+   came across still resolve -- only the values changed.
 
-   Dropped, because the components that used them are gone:
-     hero, motion-cards, showreel, cards, marquee, footer, vimeo-hero
+   Sections: motion-cards, cards, marquee, horizontal-words, footer.
+   Omitted: hero, showreel, vimeo-hero. There is no video on this page, and the
+   hero was replaced by the authority section.
 ───────────────────────────────────────────────────────────────────────────── */
 
 @import './styles/base.css';
-/* Fonts, CSS variables, reset, body/html  */
+/* Fonts, tokens, reset          */
 @import './styles/navbar.css';
-/* Navbar, logo, header                    */
-@import './styles/scenes.css';
-/* The four demo scenes                        */
+/* Navbar, logo, header          */
+@import './styles/motion-cards.css';
+/* Scene 1 — the four commit states, on inertia */
+@import './styles/cards.css';
+/* Scene 2 — four enforcement cards */
+@import './styles/marquee.css';
+/* Scene 3 — the scrolling package columns */
+@import './styles/horizontal-words.css';
+/* Scene 4 — the scrolling commit-state words */
+@import './styles/footer.css';
+/* Site footer                   */
+@import './styles/sections.css';
+/* Our own component styling         */
+@import './styles/lamps.css';
+/* Scene 4 — the live lamp rig        */
 @import './styles/cursor.css';
-/* Custom cursor bubble + scribble overlay  */
+/* Custom cursor + scribble     */
 @import './styles/responsive.css';
-/* All media queries (tablet + mobile)      */

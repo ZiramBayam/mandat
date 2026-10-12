@@ -352,14 +352,23 @@ export default function Navbar() {
                             </svg>
                         </div>
 
-                        {/* Pop-out Box for Right Side */}
+                        {/* Pop-out box. The source site put a WhatsApp QR code
+                            here. A QR code to someone else's number is not ours
+                            to ship, so it points at this repository instead --
+                            same interaction, an address we control. */}
                         <div className="nav-popout nav-wa-box">
                             <div className="nav-popout-inner">
-                                <img src="/assets/wa_qr_code.png" className="nav-wa-qr" alt="WhatsApp QR Code" />
-                                <h4 className="nav-wa-title">whatsapp us</h4>
-                                <p className="nav-wa-desc">Scan the QR code to chat with us via your smartphone.</p>
-                                <a href="#" className="nav-wa-link">
-                                    <span className="nav-wa-link-text">Chat via desktop</span>
+                                <h4 className="nav-wa-title">see the code</h4>
+                                <p className="nav-wa-desc">
+                                    Contracts, evidence and the terms encoding, all in one repository.
+                                </p>
+                                <a
+                                    href="https://github.com/ZiramBayam/mandat"
+                                    className="nav-wa-link"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    <span className="nav-wa-link-text">Open on GitHub</span>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 169 10" fill="none" className="draw-btn__svg nav-wa-link-svg">
                                         <path d="M1 6.5661C56.3941 3.06082 112.187 1.20095 168 0.999878" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.25" />
                                         <path d="M32.1313 8.63371C68.2147 6.92799 104.462 6.13378 140.695 6.25107" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.25" />

@@ -3,16 +3,15 @@
 /**
  * Mandat — four scenes, one page.
  *
- * The scene order is fixed by working/prd.md §6 and each one carries evidence:
+ *   1 Authority    the permission that was minted, and the four states it passes through
+ *   2 Enforcement what the contract refuses to do
+ *   3 Agent        an LLM reading its own cap and choosing a tier
+ *   4 Finality     commitState lamps driven by a live WebSocket
  *
- *   1 Envelope    the permission that was minted, and what it costs
- *   2 Enforcement a redeem under the cap, and one over it that reverts on chain
- *   3 Agent       an LLM reading its own cap and choosing a tier
- *   4 Finality    commitState lamps, then revocation killing the subtree
- *
- * The animation layer came from a third-party site and is credited in the README.
- * What renders here is ours: every value on this page is read from Monad at
- * runtime, never asserted by the page itself (working/constraints.md R6).
+ * The animation layer, the layout vocabulary and the section shells came from a
+ * credited third-party agency site (see README). What renders here is ours: every
+ * word is in lib/content.ts, and every value that is chain state is read from
+ * Monad at runtime rather than asserted by the page (working/constraints.md R6).
  */
 
 import SvgSymbols from '@/components/SvgSymbols';
@@ -21,10 +20,11 @@ import { SmoothScroll } from '@/lib/motion';
 import CursorBubble from '@/components/CursorBubble';
 import TransitionScribble from '@/components/TransitionScribble';
 
-import EnvelopeScene from '@/components/scenes/EnvelopeScene';
-import EnforcementScene from '@/components/scenes/EnforcementScene';
-import AgentScene from '@/components/scenes/AgentScene';
-import FinalityScene from '@/components/scenes/FinalityScene';
+import AuthoritySection from '@/components/sections/AuthoritySection';
+import EnforcementSection from '@/components/sections/EnforcementSection';
+import AgentSection from '@/components/sections/AgentSection';
+import FinalitySection from '@/components/sections/FinalitySection';
+import SiteFooter from '@/components/sections/SiteFooter';
 
 export default function Home() {
     return (
@@ -36,10 +36,11 @@ export default function Home() {
                 <Navbar />
             </header>
             <main>
-                <EnvelopeScene />
-                <EnforcementScene />
-                <AgentScene />
-                <FinalityScene />
+                <AuthoritySection />
+                <EnforcementSection />
+                <AgentSection />
+                <FinalitySection />
+                <SiteFooter />
             </main>
             <TransitionScribble />
         </>

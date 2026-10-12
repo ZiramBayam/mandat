@@ -99,6 +99,13 @@ body {
 html {
     scrollbar-width: none;
     -ms-overflow-style: none;
+    /* Sections that slide in from off-screen right -- the enforcement cards and
+       the pinned word scroll -- start outside the viewport. body already hides
+       its own overflow, but that does not stop the page from being scrollable
+       sideways when the root element is not also clipped. `clip` rather than
+       `hidden`: hidden would make html a scroll container and break the sticky
+       positioning Lenis relies on. */
+    overflow-x: clip;
 }
 
 html::-webkit-scrollbar,
