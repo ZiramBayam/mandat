@@ -50,22 +50,12 @@
     padding: 14px 16px;
   }
 
-  .logo-mandat {
-    width: 100px;
+  .nav-brand {
+    font-size: 1.9rem;
   }
 
-  .logo-work-container {
-    width: 48px;
-    height: 44px;
-  }
-
-  .logo-work-text {
-    font-size: 1.4rem;
-    margin-left: 52px;
-  }
-
-  .nav-bar__whatsapp-svg {
-    width: 26px;
+  .nav-source {
+    font-size: 0.95rem;
   }
 
   /* ── Header Hero ────────────────── */

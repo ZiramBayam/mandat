@@ -17,16 +17,35 @@
     white-space: nowrap;
 }
 
-/* ─── Page Transition Scribble ───────────────────────────────────────────── */
+/* ─── Page Transition Scribble ─────────────────────────────────────────────
+   The name, written on when the wordmark is clicked.
+
+   This was a 200vw x 200vh element holding a vector path -- the source
+   company's cursive wordmark -- which meant their logo sat over every section
+   of the page. The size below fits the word instead, and it is only visible
+   while the animation runs: opacity is 0 at rest and GSAP raises it.
+───────────────────────────────────────────────────────────────────────────── */
 .transition-scribble {
     position: fixed;
-    top: -50vh;
-    left: -50vw;
-    width: 200vw;
-    height: 200vh;
+    top: 50%;
+    left: 50%;
+    width: min(90vw, 1100px);
+    height: auto;
+    transform: translate(-50%, -50%) scale(0.7);
+    transform-origin: center;
     z-index: 9999;
     pointer-events: none;
     color: var(--color-darkblue);
+    opacity: 0;
+    font-family: 'Satisfy', cursive;
+    font-size: 260px;
+}
+
+/* The filled copy sits exactly on top of the stroked one, so it must share its
+   type settings exactly or the two will not register. */
+.scribble__stroke,
+.scribble__fill {
+    font-family: 'Satisfy', cursive;
 }
 
 /* ─── Transition States ──────────────────────────────────────────────────── */

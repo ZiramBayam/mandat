@@ -11,6 +11,21 @@
     font-weight: 100 900;
 }
 
+/* Satisfy — script, used only for the wordmark and the scribble transition.
+
+   The wordmark was originally a single vector path copied from the source site,
+   which meant the letters were someone else's artwork no matter what we renamed
+   the element. Drawing the name in a licensed font instead makes it real text:
+   selectable, readable by a screen reader, translatable, and ours. Satisfy is
+   SIL Open Font License 1.1, which permits use in a submission. */
+@font-face {
+    font-family: 'Satisfy';
+    src: url('/fonts/Satisfy.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
 /* ─── Design Tokens ─────────────────────────────────────────────────────────────
    Dark, restrained, infrastructure. The source site was a creative agency:
    warm creams, pinks, oranges. Those names are kept so the surviving navbar and
