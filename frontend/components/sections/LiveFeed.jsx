@@ -42,7 +42,7 @@ export default function LiveFeed() {
                 </h2>
             </div>
 
-            <div className="card card-wide lamps-card">
+            <div className="lamps-card">
                 <div className="lamps-head">
                     <h3>{FINALITY.lampsLabel}</h3>
                     <p className={feed.connected ? 'feed-status is-live' : 'feed-status is-down'}>

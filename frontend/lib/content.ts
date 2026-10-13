@@ -77,7 +77,7 @@ export const ENFORCEMENT = {
             ],
         },
         {
-            color: 'lightblue',
+            color: 'darkblue',
             sticker: 'camera',
             title: 'The wrong place',
             items: [

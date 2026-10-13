@@ -277,8 +277,15 @@
 }
 
 .lamps-card {
-    max-width: 1100px;
+    /* Was .card .card-wide, which is position:absolute inside .cards-wrapper.
+       Stripped of that class, it needs the surface and padding it used to get
+       from .card, or it renders as bare text on the page. */
+    max-width: 900px;
     margin: 0 auto;
+    padding: 2rem 2.25rem 2.5rem;
+    background: var(--color-white);
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
 }
 
 .state-detail {
