@@ -275,15 +275,26 @@
    or three seams and landed on the copy underneath, and the third, anchored at
    left:89%, fell off the end of the last card entirely.
 
-   Two changes. The cards carry their label at the top and nothing below it, so
-   the captions move down into the empty half of each card, where crossing a
-   seam costs nothing. And each is anchored to a different card's sliver --
-   measured as 39% / 56% / 72% of the area -- stepping down as they go so the
-   three of them never share a line.
-
    nowrap is dropped so a caption wraps inside its own card rather than
    trailing across the one beside it.
+
+   The heights below are percentages of a CARD, not of the area they used to be
+   percentages of. That distinction is the whole fix: the area is
+   min(550px, 58svh) while a card is always 22vw, so the same number means a
+   different place at every width. At 1175px the area is 550px and a card
+   starts 29.5% down it; at 1366x635 the area is 368px and a card starts 9%.
+   No single percentage survives both, and a caption at 46% of the area landed
+   on top of the "Owner agreed" title. Mirroring the card box makes the numbers
+   describe the same thing everywhere.
 ──────────────────────────────────────────────────────────────────────────── */
+.motion-card__floating-labels {
+    /* .motion-card__cards is a flex row with align-items:center, so a card sits
+       centred in the area at 22vw tall. The labels track that box exactly. */
+    top: 50%;
+    height: 22vw;
+    transform: translateY(-50%);
+}
+
 .motion-card__floating-label {
     white-space: normal;
     max-width: 12rem;
@@ -291,19 +302,36 @@
     line-height: 1.25;
 }
 
+/* A card's marker and title occupy the top 35% of it -- measured at 23.1% to
+   34.7% on a 225px card. Everything below sits in the empty half. The three
+   step down far enough that a wrapped two-line caption never reaches the one
+   above it, which is checked at both 225px and 300px card heights. */
 .motion-card__floating-label--pink {
     top: 46%;
     left: 39%;
 }
 
 .motion-card__floating-label--orange {
-    top: 59%;
+    top: 67%;
     left: 56%;
 }
 
 .motion-card__floating-label--red {
-    top: 72%;
+    top: 88%;
     left: 72%;
+}
+
+/* A card is 22vw tall but everything on top of it -- padding, marker, title --
+   is a fixed number of pixels. So the share of the card the title eats grows
+   as the viewport narrows: 26% of a 300px card at 1366, 35% at 1175, and 61%
+   at 735, where the card is 162px and there is no room left underneath for a
+   caption at any offset. Below this width the captions come off rather than sit
+   across the labels; the closing paragraph underneath the cards still says all
+   three. */
+@media (max-width: 773px) {
+    .motion-card__floating-labels {
+        display: none;
+    }
 }
 
 /* ─── Live feed ───────────────────────────────────────────────────────────── */

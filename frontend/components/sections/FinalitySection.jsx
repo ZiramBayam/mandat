@@ -200,8 +200,20 @@ export default function FinalitySection() {
                         />
                     </svg>
                     <img
-                        src="/assets/HorizontalWords SVG/horizontal-words-sticker-thumbs-up.svg"
+                        src="/assets/HorizontalWords SVG/horizontal-words-sticker-thumps-up.svg"
                         className="horizontal-words__sticker-watch"
+                        alt=""
+                        aria-hidden="true"
+                    />
+                    <img
+                        src="/assets/HorizontalWords SVG/horizontal-words-sticker-cursor.svg"
+                        className="horizontal-words__sticker-cursor"
+                        alt=""
+                        aria-hidden="true"
+                    />
+                    <img
+                        src="/assets/HorizontalWords SVG/horizontal-words-sticker-phone.svg"
+                        className="horizontal-words__sticker-phone"
                         alt=""
                         aria-hidden="true"
                     />

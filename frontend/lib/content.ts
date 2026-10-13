@@ -47,7 +47,7 @@ export const COMMIT_STATES = [
 export const AUTHORITY = {
     title: ['a permission', 'you can see.'],
     subtitle: 'capped, revocable, and checked by a contract.',
-    labels: ['it gets an allowance, not a key', 'the limit is not the money', 'asked is not allowed'],
+    labels: ['it gets an allowance, not a key', 'the limit is not the money', 'the owner can pull it back'],
     closing:
         'An agent is usually handed a wallet and trusted with it. This hands it ' +
         'an allowance instead — how much, how often, until when, and who can ' +

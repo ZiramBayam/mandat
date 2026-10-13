@@ -28,8 +28,17 @@ gsap.registerPlugin(ScrollTrigger);
 /** Resting tilt per card, clockwise as the reference had them. */
 const REST_ROTATION = [4, -5, 5, -8];
 
-/** Gap between cards once they are pushed aside, in px. */
-const SPREAD_GAP = 18;
+/**
+ * Hover spacing, taken from the reference (ServiceCards.jsx:126-127). Their
+ * clusterGap of 150 against a 320px card is deliberately less than half a card
+ * wide, so pushed-aside cards overlap each other by 170px and stay a pile. The
+ * 18px we were using instead was a card width plus a gap, which separates them
+ * completely and stretches four of them across the full width -- which is why
+ * the outermost card kept reading as stranded on its own rather than as part of
+ * the group.
+ */
+const HOVER_GAP = 120;
+const CLUSTER_GAP = 150;
 
 export default function EnforcementSection() {
     const rootRef = useRef(null);
@@ -76,13 +85,6 @@ export default function EnforcementSection() {
                     const hoveredLeft = card.offsetLeft;
                     const targetCommonTop = 0;
 
-                    // One constant for the whole spread, used to seed the cursor
-                    // and to step it. Seeding from cardWidth and then stepping by
-                    // each neighbour's own offsetWidth let the slot drift by
-                    // whatever a card measured mid-move, which is how the outer
-                    // cards ended up visibly detached from the group.
-                    const slot = cardWidth + SPREAD_GAP;
-
                     gsap.to(card, {
                         x: 0,
                         y: targetCommonTop - card.offsetTop,
@@ -94,8 +96,13 @@ export default function EnforcementSection() {
                         overwrite: true,
                     });
 
-                    const spread = (others, direction) => {
-                        let cursor = hoveredLeft + direction * slot;
+                    // Slot step for the cluster, not the gap used to seed it. The
+                    // first card out sits a card width plus HOVER_GAP away, so the
+                    // hovered card is never buried; every card after that steps by
+                    // CLUSTER_GAP, which overlaps, so the rest pile up instead of
+                    // marching off to the right.
+                    const cluster = (others, direction) => {
+                        let cursor = hoveredLeft + direction * (cardWidth + HOVER_GAP);
                         others.forEach((other, i) => {
                             const restRotation = REST_ROTATION[other.dataset.cardIndex % REST_ROTATION.length];
                             const targetX = cursor - other.offsetLeft;
@@ -122,16 +129,16 @@ export default function EnforcementSection() {
                                 ease: 'power3.out',
                                 overwrite: true,
                             });
-                            cursor += direction * slot;
-                            void i;
-                        });
-                    };
+cursor += direction * CLUSTER_GAP;
+                                void i;
+                            });
+                        };
 
-                    const before = cards.slice(0, index).reverse();
-                    const after = cards.slice(index + 1);
-                    if (after.length) spread(after, 1);
-                    if (before.length) spread(before, -1);
-                };
+                        const before = cards.slice(0, index).reverse();
+                        const after = cards.slice(index + 1);
+                        if (after.length) cluster(after, 1);
+                        if (before.length) cluster(before, -1);
+                    };
 
                 const onLeave = () => {
                     // Leaving the section entirely, or arriving on a
