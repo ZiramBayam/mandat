@@ -28,18 +28,6 @@ gsap.registerPlugin(ScrollTrigger);
 /** Resting tilt per card, clockwise as the reference had them. */
 const REST_ROTATION = [4, -5, 5, -8];
 
-/**
- * Hover spacing, taken from the reference (ServiceCards.jsx:126-127). Their
- * clusterGap of 150 against a 320px card is deliberately less than half a card
- * wide, so pushed-aside cards overlap each other by 170px and stay a pile. The
- * 18px we were using instead was a card width plus a gap, which separates them
- * completely and stretches four of them across the full width -- which is why
- * the outermost card kept reading as stranded on its own rather than as part of
- * the group.
- */
-const HOVER_GAP = 120;
-const CLUSTER_GAP = 150;
-
 export default function EnforcementSection() {
     const rootRef = useRef(null);
 
@@ -70,95 +58,40 @@ export default function EnforcementSection() {
 
             if (window.matchMedia('(max-width: 768px)').matches) return;
 
-            // The card the pointer is currently on. Every handler below used to
-            // tween all four cards unconditionally, so sweeping the cursor from
-            // one card to the next fired onLeave(A) and onEnter(B) against the
-            // same targets with overwrite:true -- whichever lost was left
-            // half-tweened. One owner at a time settles it.
-            let activeCard = null;
-
+            // The tilt is set here rather than left to the first hover, because
+            // the inertia handlers below capture their starting rotation once,
+            // at attach time. Attached against an untilted card they would
+            // spring every card back to 0 degrees the moment the pointer left.
             cards.forEach((card, index) => {
+                gsap.set(card, { rotation: REST_ROTATION[index % REST_ROTATION.length] });
+            });
+
+            // No spread, no pull-out. The source leaves a clean 120px gap
+            // between the hovered card and its neighbours, which is a deliberate
+            // pull-forward effect and reads correctly over a row of
+            // photographs. Over cards this size it just reads as the outer one
+            // stranded on its own, which is exactly what it kept doing here.
+            // The cards stay a pile; hovering only lifts one on top.
+            cards.forEach((card, index) => {
+                const restZ = index + 1;
+
                 const onEnter = () => {
-                    activeCard = card;
-
-                    const cardWidth = card.offsetWidth;
-                    const hoveredLeft = card.offsetLeft;
-                    const targetCommonTop = 0;
-
                     gsap.to(card, {
-                        x: 0,
-                        y: targetCommonTop - card.offsetTop,
-                        rotation: 0,
-                        scale: 1.06,
+                        scale: 1.04,
                         zIndex: 20,
-                        duration: 0.9,
-                        ease: 'elastic.out(1, 0.5)',
-                        overwrite: true,
+                        duration: 0.4,
+                        ease: 'power2.out',
+                        overwrite: 'auto',
                     });
-
-                    // Slot step for the cluster, not the gap used to seed it. The
-                    // first card out sits a card width plus HOVER_GAP away, so the
-                    // hovered card is never buried; every card after that steps by
-                    // CLUSTER_GAP, which overlaps, so the rest pile up instead of
-                    // marching off to the right.
-                    const cluster = (others, direction) => {
-                        let cursor = hoveredLeft + direction * (cardWidth + HOVER_GAP);
-                        others.forEach((other, i) => {
-                            const restRotation = REST_ROTATION[other.dataset.cardIndex % REST_ROTATION.length];
-                            const targetX = cursor - other.offsetLeft;
-                            gsap.to(other, {
-                                x: targetX,
-                                // Was targetX * Math.tan(angle), which scaled the
-                                // vertical throw with how far sideways the card
-                                // landed. The outer card travels three times as
-                                // far as its neighbour, so it was also thrown
-                                // three times as far vertically -- 176px against
-                                // 37px -- and the row stopped reading as one
-                                // group. Same lean, held to a fixed range.
-                                y: gsap.utils.clamp(-64, 64, targetX * 0.08),
-                                rotation: restRotation,
-                                scale: 1,
-                                duration: 1.0,
-                                // elastic.out overshoots in proportion to the
-                                // distance travelled, so the far card peaked
-                                // hundreds of pixels past its slot and was still
-                                // drifting back when you looked at it. That is
-                                // the gap that made it read as stranded. The
-                                // hovered card keeps its overshoot; a card being
-                                // pushed aside does not need one.
-                                ease: 'power3.out',
-                                overwrite: true,
-                            });
-cursor += direction * CLUSTER_GAP;
-                                void i;
-                            });
-                        };
-
-                        const before = cards.slice(0, index).reverse();
-                        const after = cards.slice(index + 1);
-                        if (after.length) cluster(after, 1);
-                        if (before.length) cluster(before, -1);
-                    };
+                };
 
                 const onLeave = () => {
-                    // Leaving the section entirely, or arriving on a
-                    // neighbouring card. Either way another card has already
-                    // claimed the spread, and resetting here would pull the
-                    // cards it just moved back on top of each other.
-                    if (activeCard !== card) return;
-                    activeCard = null;
-
-                    cards.forEach((c) => {
-                        gsap.to(c, {
-                            x: 0,
-                            y: 0,
-                            scale: 1,
-                            rotation: REST_ROTATION[c.dataset.cardIndex % REST_ROTATION.length],
-                            zIndex: 1,
-                            duration: 1.0,
-                            ease: 'power3.out',
-                            overwrite: true,
-                        });
+                    gsap.to(card, {
+                        scale: 1,
+                        zIndex: restZ,
+                        duration: 0.5,
+                        ease: 'power2.out',
+                        overwrite: 'auto',
                     });
                 };
 

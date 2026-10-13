@@ -66,35 +66,10 @@ export default function AuthoritySection() {
                 card.addEventListener('mouseleave', onLeave);
             }
 
-            for (const label of document.querySelectorAll('.motion-card__floating-label')) {
-                let lastX = 0;
-                let speedX = 0;
-                const startRotation = gsap.getProperty(label, 'rotation');
-                const startX = gsap.getProperty(label, 'x');
-                const startY = gsap.getProperty(label, 'y');
-
-                const onMove = (e) => {
-                    speedX = e.clientX - lastX;
-                    lastX = e.clientX;
-                };
-                const onEnter = (e) => {
-                    speedX = 0;
-                    lastX = e.clientX;
-                };
-                const onLeave = () => {
-                    gsap.to(label, {
-                        inertia: {
-                            x: { velocity: speedX * 20, end: startX },
-                            y: { end: startY },
-                            rotation: { velocity: speedX * 1.5, end: startRotation },
-                        },
-                    });
-                };
-
-                label.addEventListener('mousemove', onMove);
-                label.addEventListener('mouseenter', onEnter);
-                label.addEventListener('mouseleave', onLeave);
-            }
+            // The captions have no handlers of their own. They used to carry a
+            // set of inertia listeners identical to the cards', but they now
+            // reveal on their card's hover and are pointer-events:none, so
+            // there is no pointer on them to track. Their entrance is CSS too.
 
             const tl = gsap.timeline({
                 scrollTrigger: {
@@ -110,10 +85,10 @@ export default function AuthoritySection() {
                 tl.to(card, { y: from, duration: 1.2, ease: 'power3.out' }, 0.1);
             }
 
-            for (const label of document.querySelectorAll('.motion-card__floating-label')) {
-                gsap.set(label, { scale: 0, opacity: 0, rotation: -14 });
-                tl.to(label, { scale: 1, opacity: 1, rotation: 0, duration: 0.9, ease: 'back.out(1.7)' }, 0.5);
-            }
+            // The captions used to ride this timeline in from scale 0. Their
+            // visibility belongs to the card's hover now, so a scroll entrance
+            // would leave a caption pinned open on whichever card happened to be
+            // under the pointer when the section scrolled past.
 
             const underline = sectionRef.current?.querySelector('.motion-card__underline-path');
             if (underline) {

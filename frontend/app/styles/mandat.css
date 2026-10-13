@@ -275,17 +275,19 @@
    or three seams and landed on the copy underneath, and the third, anchored at
    left:89%, fell off the end of the last card entirely.
 
-   nowrap is dropped so a caption wraps inside its own card rather than
-   trailing across the one beside it.
+   Laying them out was the wrong shape of fix. Even with the container
+   measuring the card rather than the area, and the card being a fixed
+   proportion of a viewport-relative height, the arithmetic does not close: a
+   card is 22vw tall while everything printed on it -- padding, marker, title --
+   is a fixed number of pixels, so the share the title eats grows as the
+   viewport narrows. Measured: 26% of a 300px card at 1366, 35% at 1175, and
+   61% at 735, where the card is 162px and the title leaves 63px. Three
+   two-line captions need 134px with their gaps. There is no offset that fits.
 
-   The heights below are percentages of a CARD, not of the area they used to be
-   percentages of. That distinction is the whole fix: the area is
-   min(550px, 58svh) while a card is always 22vw, so the same number means a
-   different place at every width. At 1175px the area is 550px and a card
-   starts 29.5% down it; at 1366x635 the area is 368px and a card starts 9%.
-   No single percentage survives both, and a caption at 46% of the area landed
-   on top of the "Owner agreed" title. Mirroring the card box makes the numbers
-   describe the same thing everywhere.
+   So only one caption is ever on screen. Each belongs to a card, and reveals
+   on that card, which makes an overlap impossible rather than unlikely. The
+   reveal is :has() on the card, no JS: the label is not a child of the card,
+   so this is the only way to reach it.
 ──────────────────────────────────────────────────────────────────────────── */
 .motion-card__floating-labels {
     /* .motion-card__cards is a flex row with align-items:center, so a card sits
@@ -293,44 +295,94 @@
     top: 50%;
     height: 22vw;
     transform: translateY(-50%);
+    pointer-events: none;
 }
 
 .motion-card__floating-label {
+    position: absolute;
     white-space: normal;
     max-width: 12rem;
     text-align: center;
     line-height: 1.25;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.85);
+    transition:
+        opacity 0.28s ease,
+        transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* A card's marker and title occupy the top 35% of it -- measured at 23.1% to
-   34.7% on a 225px card. Everything below sits in the empty half. The three
-   step down far enough that a wrapped two-line caption never reaches the one
-   above it, which is checked at both 225px and 300px card heights. */
+/* The source sets pointer-events:auto on the label, at (0,2,0). This one is
+   written to match so it wins, and it has to: a label that can be hovered
+   drops the card's :hover the moment the pointer crosses onto it, the caption
+   disappears, the pointer is back over the card and it comes back again. That
+   loop runs at frame rate. */
+.motion-card__floating-labels .motion-card__floating-label {
+    pointer-events: none;
+}
+
+/* Each caption sits in the empty lower part of its own card, at 78% so it
+   clears the tallest title (the two-line "Owner agreed", ending at 46% of a
+   225px card) plus half its own height, and within the card's bottom edge.
+   left centres it on that card's visible sliver: 24%, 39% and 54% of the
+   area. */
 .motion-card__floating-label--pink {
-    top: 46%;
-    left: 39%;
+    top: 78%;
+    left: 24%;
 }
 
 .motion-card__floating-label--orange {
-    top: 67%;
-    left: 56%;
+    top: 78%;
+    left: 39%;
 }
 
 .motion-card__floating-label--red {
-    top: 88%;
-    left: 72%;
+    top: 78%;
+    left: 54%;
 }
 
-/* A card is 22vw tall but everything on top of it -- padding, marker, title --
-   is a fixed number of pixels. So the share of the card the title eats grows
-   as the viewport narrows: 26% of a 300px card at 1366, 35% at 1175, and 61%
-   at 735, where the card is 162px and there is no room left underneath for a
-   caption at any offset. Below this width the captions come off rather than sit
-   across the labels; the closing paragraph underneath the cards still says all
-   three. */
+.motion-card__cards-area:has(.motion-card__card--1:hover) .motion-card__floating-label--pink,
+.motion-card__cards-area:has(.motion-card__card--2:hover) .motion-card__floating-label--orange,
+.motion-card__cards-area:has(.motion-card__card--3:hover) .motion-card__floating-label--red {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+/* A card is 22vw tall but the title on it is a fixed number of pixels, so below
+   about 727px the card is too short to hold a caption under its own title. The
+   closing paragraph underneath still carries all three. */
 @media (max-width: 773px) {
     .motion-card__floating-labels {
         display: none;
+    }
+}
+
+/* Without a pointer there is no hover, so nothing would ever appear. Below the
+   fan there is width for all three side by side -- 1100px against 3x192px --
+   and no card to collide with. */
+@media (hover: none) {
+    .motion-card__floating-labels {
+        top: 100%;
+        height: auto;
+        transform: none;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding-top: 1.5rem;
+    }
+
+    .motion-card__floating-label {
+        position: static;
+        transform: none;
+        opacity: 1;
+    }
+
+    .motion-card__floating-label--pink,
+    .motion-card__floating-label--orange,
+    .motion-card__floating-label--red {
+        top: auto;
+        left: auto;
     }
 }
 
@@ -423,29 +475,26 @@
     height: min(550px, 58svh);
 }
 
-/* The evidence chips were floating in the dead space at the bottom of the
-   650px card wrapper -- the cards end about 64px above its floor, and the chips
-   were below that, in the gap between one section and the next. Pulled up to sit
-   directly under the cards.
-*/
-.cards-wrapper + .evidence-strip {
-    margin-top: 1rem;
-}
-
 /* The wrapper is a fixed 650px because in the source it holds absolutely
    positioned cards that a script fans out on hover. The cards are 486px tall and
    sit 20-100px from the top, so roughly 64px at the bottom is always empty and
    the wrapper is a box taller than its contents. min() keeps the source's
-   height where it fits and gives the slack back where it does not. */
+   height where it fits and gives the slack back where it does not.
+
+   The evidence chips sit immediately after it, and they were landing under the
+   cards: at 1366x635 the wrapper is 470px and a card is 460px, leaving 5px of
+   slack, and a card tilted 8 degrees is 32px wider than it is tall at each end,
+   so the bottom card reached about 11px past the wrapper -- straight over chips
+   that had only 16px of clearance. The rotation is set in JS now, so this is
+   the full amount a card can protrude; the clamp keeps that much back plus
+   breathing room, and still gives the margin up on a tall screen. */
 .cards-wrapper {
     height: min(650px, 74svh);
-    /* 100px top and bottom, from the source. The cards are 460px tall and
-       absolutely positioned inside a wrapper that is 74svh, so the slack left
-       by that centring lands on top of this margin -- which is what put ~170px
-       between the heading and the first card on a 635px-tall laptop, with the
-       cards then running off the bottom of the screen. clamp() keeps the
-       source's 100px wherever there is room for it. */
     margin: clamp(2rem, 6svh, 100px) auto;
+}
+
+.cards-wrapper + .evidence-strip {
+    margin-top: clamp(2rem, 9svh, 6rem);
 }
 
 /* ─── Marquee arrow ──────────────────────────────────────────────────────────
