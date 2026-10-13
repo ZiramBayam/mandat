@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="28" viewBox="0 0 20 28" fill="none">
+  <title>mandat text caret</title>
+  <path d="M10 3.5V8.5M10 19.5V24.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M5 14L5 10.5C5 8.016 6.12 6.9 10 6.9C13.88 6.9 15 8.016 15 10.5L15 14C15 17.45 13.955 20.1 10 20.1C6.045 20.1 5 17.45 5 14Z" fill="currentColor"/>
+</svg>

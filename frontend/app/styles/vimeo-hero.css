@@ -9,7 +9,7 @@
     overflow: hidden;
     background-color: var(--color-black-soft);
     border-radius: 24px;
-    cursor: url("/assets/Cursor SVG/cursor-pointer.svg") 2 0, pointer;
+    cursor: var(--cursor-link) 6 1, pointer;
 }
 
 /* ── Iframe fills the container in "cover" mode ── */
@@ -84,11 +84,11 @@
     gap: 0 0.16em;
     user-select: none;
     pointer-events: auto;
-    cursor: url("/assets/Cursor SVG/cursor-text.svg") 2 0, text;
+    cursor: var(--cursor-text) 10 14, text;
 }
 
 .vimeo-hero__title * {
-    cursor: url("/assets/Cursor SVG/cursor-text.svg") 2 0, text;
+    cursor: var(--cursor-text) 10 14, text;
 }
 
 /* Each word span */
@@ -200,7 +200,7 @@
     border: 1.5px solid rgba(255, 255, 255, 0.3);
     background: rgba(255, 255, 255, 0.08);
     color: var(--color-white);
-    cursor: url("/assets/Cursor SVG/cursor-pointer.svg") 2 0, pointer;
+    cursor: var(--cursor-link) 6 1, pointer;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     transition:

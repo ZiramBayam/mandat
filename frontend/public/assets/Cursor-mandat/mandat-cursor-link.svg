@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="28" viewBox="0 0 24 28" fill="none">
+  <title>mandat link hand</title>
+  <path d="M6.1 12.4L5 11.2C3.95 10.1 3.95 8.35 5 7.25C6.05 6.15 7.8 6.15 8.85 7.2L10.2 8.6V4.6C10.2 3.05 11.45 1.8 13 1.8C14.55 1.8 15.8 3.05 15.8 4.6V8.2C17.15 7.65 18.7 8.7 18.7 10.35C20 10.15 21.2 11.25 21.2 12.65C21.2 18.1 17.6 22.4 12.6 22.4C9.1 22.4 6.1 20.6 6.1 12.4Z" fill="currentColor" stroke="#ffffff" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M10.2 8.6V11.8" stroke="#ffffff" stroke-width="1.3" stroke-linecap="round" opacity="0.55"/>
+</svg>

@@ -23,7 +23,7 @@
     letter-spacing: -5px;
     color: var(--color-dark);
     margin-bottom: 0;
-    cursor: url("/assets/Cursor SVG/cursor-text.svg") 12 12, auto;
+    cursor: var(--cursor-text) 10 14, auto;
 }
 
 .motion-card__subtitle {
@@ -229,5 +229,5 @@
     line-height: 1.7;
     color: var(--color-dark);
     letter-spacing: -0.2px;
-    cursor: url("/assets/Cursor SVG/cursor-text.svg") 12 12, auto;
+    cursor: var(--cursor-text) 10 14, auto;
 }

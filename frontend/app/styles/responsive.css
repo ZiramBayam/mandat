@@ -301,27 +301,4 @@
     width: 110%;
     margin-left: -5%;
   }
-
-  /* ── Credits badge ──────────────── */
-  .footer-credits-wrapper {
-    margin-right: -15px;
-    margin-bottom: -15px;
-  }
-
-  .footer-credits {
-    font-size: 0.75rem;
-  }
-
-  .credits-box {
-    padding: 16px 20px;
-    gap: 20px;
-  }
-
-  .credits-label {
-    font-size: 0.85rem;
-  }
-
-  .credits-name {
-    font-size: 0.95rem;
-  }
 }

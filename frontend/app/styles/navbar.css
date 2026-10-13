@@ -133,6 +133,11 @@
     display: inline-block;
     padding: 0 0.15em;
     transform-origin: center;
+    /* Nothing in this file set a cursor, so every link here inherited the page
+       default -- an open hand on something that navigates. The credited site's
+       stylesheet sets the link cursor on these three selectors; the class names
+       came across with the rewrite and the declarations did not. */
+    cursor: var(--cursor-link) 6 1, pointer;
 }
 
 .nav-brand:hover {
@@ -155,6 +160,7 @@
     position: relative;
     padding-bottom: 2px;
     transition: color 0.25s ease;
+    cursor: var(--cursor-link) 6 1, pointer;
 }
 
 /* Underline grows from the left on hover rather than appearing, so it does not
@@ -187,6 +193,7 @@
     text-decoration: none;
     border-bottom: 1px solid var(--border-strong);
     transition: color 0.25s ease, border-color 0.25s ease;
+    cursor: var(--cursor-link) 6 1, pointer;
 }
 
 .nav-source:hover {

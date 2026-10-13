@@ -16,7 +16,7 @@
     font-weight: 800;
     letter-spacing: -4px;
     color: var(--color-black);
-    cursor: url("/assets/Cursor SVG/cursor-text.svg") 12 12, auto;
+    cursor: var(--cursor-text) 10 14, auto;
 }
 
 .italic-text {

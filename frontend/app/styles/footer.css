@@ -46,7 +46,7 @@
     font-weight: 450;
     width: fit-content;
     text-transform: lowercase;
-    cursor: url("/assets/Cursor SVG/cursor-text.svg") 12 12, auto;
+    cursor: var(--cursor-text) 10 14, auto;
 }
 
 .footer-column h3 {
@@ -55,7 +55,7 @@
     font-weight: 800;
     line-height: 1.1;
     letter-spacing: -1px;
-    cursor: url("/assets/Cursor SVG/cursor-pointer.svg") 12 12, pointer;
+    cursor: var(--cursor-link) 6 1, pointer;
 }
 
 .footer-column address {
@@ -64,7 +64,7 @@
     font-size: 2rem;
     font-weight: 1000;
     line-height: 1.2;
-    cursor: url("/assets/Cursor SVG/cursor-text.svg") 12 12, auto;
+    cursor: var(--cursor-text) 10 14, auto;
 }
 
 .footer-map-link {
@@ -81,7 +81,7 @@
 }
 
 .footer-map-link span {
-    cursor: url("/assets/Cursor SVG/cursor-pointer.svg") 12 12, pointer;
+    cursor: var(--cursor-link) 6 1, pointer;
 }
 
 .draw-btn__svg {
@@ -98,7 +98,7 @@
     letter-spacing: -0.5px;
     width: fit-content;
     display: inline-block;
-    cursor: url("/assets/Cursor SVG/cursor-pointer.svg") 12 12, pointer;
+    cursor: var(--cursor-link) 6 1, pointer;
 }
 
 .footer-whatsapp {
@@ -109,14 +109,14 @@
     text-decoration: none;
     width: fit-content;
     display: inline-block;
-    cursor: url("/assets/Cursor SVG/cursor-pointer.svg") 12 12, pointer;
+    cursor: var(--cursor-link) 6 1, pointer;
 }
 
 .footer-note {
     font-size: 1rem;
     opacity: 0.8;
     line-height: 1.4;
-    cursor: url("/assets/Cursor SVG/cursor-text.svg") 12 12, auto;
+    cursor: var(--cursor-text) 10 14, auto;
 }
 
 /* ─── Social Icons ───────────────────────────────────────────────────────── */
@@ -133,7 +133,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: url("/assets/Cursor SVG/cursor-pointer.svg") 12 12, pointer;
+    cursor: var(--cursor-link) 6 1, pointer;
 }
 
 .footer-socials a svg {
@@ -161,126 +161,6 @@
     width: 104.9%;
     height: auto;
     margin-left: -2.5%;
-}
-
-.footer-bottom-row {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    pointer-events: none;
-    z-index: 10;
-}
-
-.footer-url {
-    display: none;
-}
-
-/* ─── Credits Pop-out ────────────────────────────────────────────────────── */
-.footer-credits-wrapper {
-    position: relative;
-    pointer-events: auto;
-    margin-right: -25px;
-    margin-bottom: -25px;
-    z-index: 100;
-}
-
-/* Bridge the gap between the credits button and the popup box */
-.footer-credits-wrapper::before {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: -10px;
-    right: -10px;
-    height: calc(100% + 25px);
-    pointer-events: auto;
-}
-
-.footer-credits {
-    background: var(--color-black);
-    font-family: "Epilogue";
-    color: var(--color-white);
-    padding: 3px 12px;
-    border-radius: 20px;
-    border-bottom-left-radius: 1px;
-    text-decoration: none;
-    font-size: 1rem;
-    pointer-events: auto;
-    letter-spacing: 0.5px;
-    display: inline-block;
-    position: relative;
-    z-index: 2;
-    cursor: url("/assets/Cursor SVG/cursor-pointer.svg") 12 12, pointer;
-}
-
-.credits-box {
-    position: absolute;
-    bottom: calc(100% + 15px);
-    right: 0;
-    background: var(--color-black);
-    border-radius: 12px;
-    opacity: 0;
-    visibility: hidden;
-    transform-origin: bottom right;
-    border: 3px solid var(--color-white);
-    pointer-events: auto;
-    overflow: hidden;
-    z-index: 1;
-
-    /* Act as a clipping mask anchoring content bottom-right */
-    box-sizing: border-box;
-    display: flex;
-    justify-content: flex-end;
-    align-items: flex-end;
-}
-
-.credits-content {
-    display: flex;
-    /* REDUCED BOX SIZE: Makes the box smaller without changing text size */
-    gap: 38px;
-    padding: 34px 26px;
-    white-space: nowrap;
-    width: max-content;
-    height: max-content;
-}
-
-
-.credits-item {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.overflow-wrapper {
-    overflow: visible;
-}
-
-.credits-label,
-.credits-name {
-    display: inline-block;
-}
-
-.credits-label {
-    color: var(--color-white);
-    font-size: 1.3rem;
-    font-weight: 950;
-    font-family: 'Epilogue', sans-serif;
-}
-
-.credits-name {
-    color: var(--color-white);
-    font-size: 1.1rem;
-    font-weight: 450;
-    font-family: 'Epilogue', sans-serif;
-    opacity: 0.9;
-    text-decoration: none;
-    /* Removed underline since it's an <a> tag now */
-    cursor: url("/assets/Cursor SVG/cursor-pointer.svg") 12 12, pointer;
-    /* Added custom pointer */
-    display: inline-block;
 }
 
 /* ─── Footer Stickers ────────────────────────────────────────────────────── */

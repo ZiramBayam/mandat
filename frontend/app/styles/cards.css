@@ -8,9 +8,7 @@
   margin: 100px auto;
   display: flex;
   justify-content: center;
-  cursor:
-    url("/assets/Cursor SVG/cursor-text.svg") 12 12,
-    auto;
+  cursor: var(--cursor-text) 10 14, auto;
 }
 
 /* ─── Base Card ──────────────────────────────────────────────────────────── */
@@ -29,9 +27,7 @@
   color: var(--color-white);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
   transform-origin: center center;
-  cursor:
-    url("/assets/Cursor SVG/cursor-text.svg") 12 12,
-    auto;
+  cursor: var(--cursor-text) 10 14, auto;
 }
 
 .card-title {

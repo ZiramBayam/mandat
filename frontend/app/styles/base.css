@@ -64,6 +64,19 @@
     --border-subtle: #ddd5cd;
     --border-strong: #c4bab0;
 
+    /* Cursors, drawn for this project rather than taken from the credited
+       site. Each is a single currentColor fill with a white outline, so it
+       inherits whatever colour it is sitting on: dark over the cream page, over
+       the bright cards, and white where a rule overrides it below.
+
+       The hotspot is NOT part of the token. It goes with each use:
+       `cursor: var(--cursor-link) 6 1, pointer`. Custom properties are
+       substituted at token level before the declaration is parsed, so the
+       resolved value is `cursor: url(...) 6 1, pointer` and it is valid. */
+    --cursor-arrow: url("/assets/Cursor-mandat/mandat-cursor-arrow.svg");
+    --cursor-text: url("/assets/Cursor-mandat/mandat-cursor-text.svg");
+    --cursor-link: url("/assets/Cursor-mandat/mandat-cursor-link.svg");
+
     /* Outcome colours. Reused by the chain, so they must stay consistent across
        every package that reports a result. Darkened from the dark-theme values:
        the originals were tuned to sit on near-black and wash out on cream. */
@@ -115,7 +128,7 @@ body {
     overflow-x: hidden;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    cursor: url("/assets/Cursor SVG/cursor-default.svg") 2 0, auto;
+    cursor: var(--cursor-arrow) 2 1, auto;
 }
 
 html {
