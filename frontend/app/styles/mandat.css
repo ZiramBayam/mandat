@@ -415,18 +415,31 @@
 ──────────────────────────────────────────────────────────────────────────── */
 .card-green {
     left: calc(50% - 510px);
+    /* cards.css uses --color-green, #29725f, and inherits white text from
+       .card. This section's own commit cards run on bright, saturated fills
+       already, so a near-teal card here read as the odd one out. The colour
+       token itself is left alone: it is also the navbar's hover colour on the
+       cream page, where a brighter green would lose its contrast. Overridden
+       per card instead, and the text flips to dark the way .card-darkblue,
+       .card-orange and .card-pink already do. */
+    background-color: #2fbf7f;
+    color: var(--color-dark);
 }
 
 .card-darkblue {
     left: calc(50% - 290px);
+    background-color: #8aa8ff;
 }
 
 .card-orange {
     left: calc(50% - 80px);
+    background-color: #ff7a45;
 }
 
 .card-maroon {
     left: calc(50% + 190px);
+    background-color: #ef4d86;
+    color: var(--color-dark);
 }
 
 /* ─── Live feed ───────────────────────────────────────────────────────────── */

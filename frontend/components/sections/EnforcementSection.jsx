@@ -26,12 +26,21 @@ import { ENFORCEMENT, EVIDENCE } from '@/lib/content';
 gsap.registerPlugin(ScrollTrigger);
 
 /**
- * Hover spacing, from the reference (ServiceCards.jsx:126-128, 144, 149). The
- * first card out clears the hovered one by HOVER_GAP; every card after that
- * steps CLUSTER_GAP, which is under half a card wide, so the ones that are not
- * hovered overlap each other and stay a fan instead of lining up.
+ * Hover spacing, from the reference (ServiceCards.jsx:126-128, 144, 149).
+ *
+ * HOVER_GAP is the clear space between the card being pointed at and the first
+ * one pushed aside. The reference uses 120px, which over a row this size reads
+ * as a hole rather than a separation. At 24px the pushed card clears the front
+ * card by a visible margin without the row coming apart.
+ *
+ * CLUSTER_GAP steps every card after that, and stays under half a card wide so
+ * the ones that are not hovered overlap each other and stay a fan. It cannot go
+ * to CARD_WIDTH + gap like the first one does: four cards 320px wide laid out
+ * without a single overlap need 4x320 + 3x24 = 1352px, so pointing at the
+ * outermost card would push the last one clean off a 1366px screen. The two
+ * cards nearest the pointer separate; the ones behind them lean.
  */
-const HOVER_GAP = 120;
+const HOVER_GAP = 24;
 const CLUSTER_GAP = 150;
 const CARD_WIDTH = 320;
 
