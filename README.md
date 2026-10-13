@@ -64,9 +64,13 @@ downgrade. Asking for the 0.8 tier reverted on chain both times:
 
 The cap it reads is recomputed from the caveats and confirmed against chain, not
 taken from the header, and it picks a tier *name* — the runner supplies the price.
-Otherwise a downgrade would prove nothing. Full record and the three runs that
-are honestly not evidence:
+Otherwise a downgrade would prove nothing. Full record, including the three runs
+that are honestly not evidence:
 [`contracts/deployments.md`](contracts/deployments.md#s5--an-agent-that-reads-its-own-cap).
+
+Live at **[mandat-agent.vercel.app](https://mandat-agent.vercel.app)** — a
+four-scene demo that reads Monad testnet live: the commit lamps off
+`monadNewHeads`, the registry readback, the two transactions above.
 
 ---
 
@@ -78,7 +82,7 @@ Requires Node ≥ 22, pnpm, and Foundry.
 git clone <this repo> && cd mandat
 git submodule update --init --recursive   # 12 pinned submodules
 pnpm install
-pnpm typecheck && pnpm test               # 118 tests
+pnpm typecheck && pnpm test               # 131 tests
 forge test --root contracts               # 80 tests
 ```
 
@@ -108,6 +112,14 @@ script reads it by explicit path (`g6.ts`, `explorer.ts`, `seller-check.ts`,
 `three-light/setup.ts`). The root `.env` holds only the S5 model key and is read
 by S5 alone. Neither is in git; `.gitignore:16` covers both. Private keys live
 only in `contracts/.env`.
+
+**The packages are not on npm.** All four are `private` and unpublished. Two
+reasons, both deliberate. Their `main` and `types` point at `./src/index.ts` —
+TypeScript source with no build step — so a JavaScript consumer pulling them off
+a registry would get files it cannot load. And they depend on each other by
+`workspace:*`, so the `0.1.0` in each is a workspace version, not a release
+number. Clone the repo instead; that is also the better thing to hand a reviewer,
+because the 211 tests are readable and an npm install is not.
 
 ### Produce the evidence pair
 
@@ -185,12 +197,45 @@ packages/envelope-cli/     SKILL.md -> delegations with caveats
 packages/three-light/      monadNewHeads client, commitState index, release policy
 packages/authority-header/ seller, authority verification, G6 + explorer scripts
 contracts/                 AuthorityRegistry, SkillAuthorityEnforcer, tests
-frontend/                  minimal chain-reading shell
+frontend/                  four-scene demo site (Next.js, reads the chain live)
 ```
 
 `@mandat/protocol` is the only place the terms encoding is written down. The
 contract, the CLI, the seller, and the tests all agree because they all import
 it — not because four implementations were kept in sync.
+
+---
+
+## Where this goes next
+
+**Now.** Both contracts live on Monad testnet, `AuthorityRegistry` verified, two
+transactions recorded that show a cap holding and being revoked.
+
+**Next, in the order it is worth doing:**
+
+1. **Verify `SkillAuthorityEnforcer`.** It fails on both explorers: Monadscan
+   because its compiler list does not carry solc 0.8.23, MonadVision for the
+   reason set out in [`contracts/deployments.md`](contracts/deployments.md). The
+   contract that actually does the refusing is the one without a verified badge,
+   and that is the wrong way round. The bytecode is not in question — it is
+   byte-identical to the deploy transaction, and the constructor arguments match.
+   Everything else here is secondary to getting this badge.
+2. **Mainnet, chain 143.** The primitives this depends on are live there.
+   ERC-8004 is deployed on mainnet and empty on testnet — the canonical address
+   has no code on the testnet RPC — which is why `bindAgentFromERC8004` cannot be
+   used here. EIP-7702 transactions are accepted on testnet but the state
+   delegation is not applied, which is why the root is a deployed
+   `MultiSigDeleGator` rather than a 7702-authorised EOA.
+3. **A real x402 settlement.** The seller already verifies that a settlement
+   transferred the right token and amount, and requires the facilitator to
+   attest. No payment has been made through the live facilitator yet.
+4. **Per-skill keys from a passkey.** The caveat shape already supports a key per
+   skill; deriving it from a passkey PRF is named and not built.
+
+**Not ours, deliberately.** Revocation and delegation verification are DTK's. We
+use them as they are and do not claim them. What this project adds is the
+envelope shape, the authority graph on top, the identity binding, the seller
+header, and the finality policy.
 
 ---
 
@@ -237,10 +282,7 @@ demo settles in WMON.
 ## AI disclosure
 
 **S5 — the self-limiting agent — runs on Google Gemini (`gemini-3.8-flash`,
-temperature 0).** The original design in `working/prd.md` specified
-`qwen3.8-max`; it was changed to Gemini on resource grounds. Nothing in S5
-depends on which model is used: what it demonstrates is an agent reading its own
-cap from an Authority Header and deciding accordingly.
+temperature 0).** 
 
 The prompt shows the price of each tier and the model's task, but **never states
 the agent's budget** — that arrives only from the chain, through the same
