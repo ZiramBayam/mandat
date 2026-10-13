@@ -25,9 +25,6 @@ import { ENFORCEMENT, EVIDENCE } from '@/lib/content';
 
 gsap.registerPlugin(ScrollTrigger);
 
-/** Resting tilt per card, clockwise as the reference had them. */
-const REST_ROTATION = [4, -5, 5, -8];
-
 export default function EnforcementSection() {
     const rootRef = useRef(null);
 
@@ -58,20 +55,16 @@ export default function EnforcementSection() {
 
             if (window.matchMedia('(max-width: 768px)').matches) return;
 
-            // The tilt is set here rather than left to the first hover, because
-            // the inertia handlers below capture their starting rotation once,
-            // at attach time. Attached against an untilted card they would
-            // spring every card back to 0 degrees the moment the pointer left.
-            cards.forEach((card, index) => {
-                gsap.set(card, { rotation: REST_ROTATION[index % REST_ROTATION.length] });
-            });
-
             // No spread, no pull-out. The source leaves a clean 120px gap
             // between the hovered card and its neighbours, which is a deliberate
             // pull-forward effect and reads correctly over a row of
             // photographs. Over cards this size it just reads as the outer one
             // stranded on its own, which is exactly what it kept doing here.
             // The cards stay a pile; hovering only lifts one on top.
+
+            // Tilt and spacing both belong to the stylesheet -- cards.css sets a
+            // rotate() per card, and the row's positions are in mandat.css.
+            // Nothing here needs to set a starting rotation.
             cards.forEach((card, index) => {
                 const restZ = index + 1;
 

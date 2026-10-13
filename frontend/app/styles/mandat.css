@@ -386,6 +386,47 @@
     }
 }
 
+/* ─── Enforcement card row ────────────────────────────────────────────────────
+   cards.css lays this row out as five absolute positions:
+
+     .card-green     left: calc(50% - 650px)   top: 50px
+     .card-darkblue  left: calc(50% - 430px)   top: 100px
+     .card-orange    left: calc(50% - 220px)   top:  20px
+     .card-maroon    left: calc(50% +  50px)   top:  30px
+     .card-pink      left: calc(50% + 320px)   top:  70px
+
+   Four cards are rendered, using green, darkblue, orange and pink -- which skips
+   the maroon slot. So the row did not end 540px after its third card, where the
+   neighbouring cards are 210 to 270px apart, and the last one sat out on its own
+   in empty space. It also did not start centred: -650px is tuned for a row of
+   five, so the first card ended up hard against the left edge with roughly
+   290px of nothing on the right.
+
+   Four slots on one even step, centred. The leftmost card's left edge and the
+   last card's right edge are both 475px from the centre, and every gap is 210px.
+   A 210px step on a 320px card overlaps by 110px, which is the same overlap the
+   source's own spacing produces.
+
+   The source's vertical stagger (top: 50/100/20/70) is left alone -- that part
+   is deliberate and reads as intentional. The rotation stays in the stylesheet
+   too, per card.
+──────────────────────────────────────────────────────────────────────────── */
+.card-green {
+    left: calc(50% - 475px);
+}
+
+.card-darkblue {
+    left: calc(50% - 265px);
+}
+
+.card-orange {
+    left: calc(50% - 55px);
+}
+
+.card-pink {
+    left: calc(50% + 155px);
+}
+
 /* ─── Live feed ───────────────────────────────────────────────────────────── */
 .live-feed {
     padding-bottom: 4svh;

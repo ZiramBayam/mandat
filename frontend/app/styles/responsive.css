@@ -96,9 +96,29 @@
      !important here outranked the grid by source order and silently reverted it
      -- the four cards stacked into a 1680px column that no amount of scrolling
      or hovering could open. Width is left to the grid.
+
+     The rest of the block was missing: only overflow was here, so .card was
+     still position:absolute with the row's left offsets applied, and four 320px
+     cards were laid across a 360px screen at a 210px step. This file is imported
+     after mandat.css, so the resets below outrank the four left values there
+     without needing !important.
   */
   .cards-wrapper {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    height: auto;
+    margin: 3rem auto;
     overflow: visible;
+  }
+
+  .card {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    height: auto;
+    min-height: 22rem;
+    transform: none;
   }
 
   /* ── Double Marquee ─────────────── */
