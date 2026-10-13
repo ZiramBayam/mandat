@@ -340,3 +340,65 @@
     color: var(--color-dark);
     letter-spacing: -0.035em;
 }
+
+/* ─── Vertical rhythm ───────────────────────────────────────────────────────
+   The source opens a content section with 200px of padding and gives the fanned
+   card area a fixed 550px. Together that is 750px before a single card is drawn:
+   on a 768px laptop the cards then run off the bottom of the screen, which is
+   what the screenshots showed. min() keeps the source's spacing wherever there
+   is room for it and gives the height back where there is not.
+───────────────────────────────────────────────────────────────────────────── */
+.content-section {
+    padding: min(200px, 12svh) 20px 0;
+}
+
+.motion-card__cards-area {
+    height: min(550px, 58svh);
+}
+
+/* The evidence chips were floating in the dead space at the bottom of the
+   650px card wrapper -- the cards end about 64px above its floor, and the chips
+   were below that, in the gap between one section and the next. Pulled up to sit
+   directly under the cards.
+*/
+.cards-wrapper + .evidence-strip {
+    margin-top: 1rem;
+}
+
+/* The wrapper is a fixed 650px because in the source it holds absolutely
+   positioned cards that a script fans out on hover. The cards are 486px tall and
+   sit 20-100px from the top, so roughly 64px at the bottom is always empty and
+   the wrapper is a box taller than its contents. min() keeps the source's
+   height where it fits and gives the slack back where it does not. */
+.cards-wrapper {
+    height: min(650px, 74svh);
+}
+
+/* ─── Marquee arrow ──────────────────────────────────────────────────────────
+   The source draws its arrow at left:70% with a width of 350px inside a 420px
+   box, so it deliberately overhangs its own container by about 200px. In their
+   layout the gap next to it is empty; here the marquee cards begin immediately
+   after, and the arrow was drawn straight through them.
+
+   Both decorative items are moved inside the box instead of being clipped --
+   clipping a drawn stroke mid-loop reads as a rendering fault, whereas moving
+   it keeps the whole gesture.
+───────────────────────────────────────────────────────────────────────────── */
+/* Scoped through .Double-marquee on purpose. These sit at (0,2,0) in the
+   cascade, but responsive.css is imported after this file and restates both
+   positions at the same specificity inside a media query -- so at narrow
+   widths responsive.css wins and the arrow goes back to overhanging.
+   Adding the ancestor takes these to (0,3,0) and settles it in both places.
+*/
+.Double-marquee .marquee-svg-item:nth-child(1) {
+    left: 8%;
+}
+
+.Double-marquee .marquee-svg-item:nth-child(2) {
+    left: 9%;
+}
+
+/* A real gap between the two columns, so nothing can reach across. */
+.Double-marquee {
+    gap: clamp(3rem, 7vw, 8rem);
+}

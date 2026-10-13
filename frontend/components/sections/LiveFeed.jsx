@@ -18,16 +18,11 @@
  * playing something reassuring.
  */
 
-import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import { useCommitFeed } from '@/lib/chain';
+import { CommitLamps, CommitLampShapes } from '@/lib/motion/CommitLamps';
 import { COMMIT_STATES as RIG_STATES } from '@/lib/motion/rig';
 import { COMMIT_STATES, FINALITY } from '@/lib/content';
-
-const CommitLamps = dynamic(() => import('@/lib/motion/CommitLamps').then((m) => m.CommitLamps), {
-    ssr: false,
-    loading: () => <div className="commit-lamps is-loading" />,
-});
 
 export default function LiveFeed() {
     const feed = useCommitFeed();
@@ -51,6 +46,7 @@ export default function LiveFeed() {
                 </div>
                 <p className="lamps-blurb">{FINALITY.lampsBlurb}</p>
 
+                <CommitLampShapes />
                 <CommitLamps reached={feed.lastCommitState} connected={feed.connected} />
 
                 <ul className="commit-lamps-fallback">

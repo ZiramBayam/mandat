@@ -43,20 +43,78 @@
     color: var(--unknown);
 }
 
+/* ─── The four marks ────────────────────────────────────────────────────────
+   Was a 320px React-Three-Fiber canvas holding four emissive capsules. It is now
+   four flat SVG marks in a row, which needs no WebGL context, renders on the
+   server, and reads at a glance.
+
+   Two states, not four: a mark is either filled (reached) or an outline (not).
+   The four silhouettes differ, so the sequence survives greyscale and colour
+   vision deficiency without relying on hue at all.
+───────────────────────────────────────────────────────────────────────────── */
 .commit-lamps {
+    display: flex;
+    align-items: flex-start;
+    gap: clamp(1rem, 4vw, 3rem);
     width: 100%;
-    height: 320px;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.75rem;
+    list-style: none;
+    padding: 0;
 }
 
-.commit-lamps.is-loading {
-    background: repeating-linear-gradient(
-        90deg,
-        transparent 0 40px,
-        var(--border-subtle) 40px 41px
-    );
-    opacity: 0.4;
+.commit-lamps__item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    flex: 0 1 auto;
 }
+
+.commit-lamps__mark {
+    width: clamp(40px, 7vw, 64px);
+    height: auto;
+    stroke: var(--commit-pending, #b9b0a6);
+    stroke-width: 4;
+    fill: none;
+    transition: stroke 0.4s ease, fill 0.4s ease, transform 0.4s ease;
+}
+
+.commit-lamps__label {
+    font-family: 'Epilogue', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-align: center;
+    color: var(--text-muted);
+    transition: color 0.4s ease;
+}
+
+.commit-lamps__item.is-lit .commit-lamps__mark {
+    stroke: var(--state-colour, var(--color-green));
+    fill: var(--state-colour, var(--color-green));
+    transform: scale(1.06);
+}
+
+.commit-lamps__item.is-lit .commit-lamps__label {
+    color: var(--text-primary);
+}
+
+/* The ring marks itself: an outline is the only way to fill it. */
+.commit-lamps__item[data-state='Verified'] .commit-lamps__mark {
+    fill: none;
+}
+
+.commit-lamps__item[data-state='Verified'].is-lit .commit-lamps__mark {
+    fill: none;
+    stroke-width: 7;
+}
+
+/* One colour per step, matching the commit panels in the fanned cards so the
+   two sections read as the same four things. */
+.commit-lamps__item[data-state='Proposed'] { --state-colour: var(--commit-proposed); }
+.commit-lamps__item[data-state='Voted'] { --state-colour: var(--commit-voted); }
+.commit-lamps__item[data-state='Finalized'] { --state-colour: var(--commit-finalized); }
+.commit-lamps__item[data-state='Verified'] { --state-colour: var(--commit-verified); }
 
 /* The plain list is always rendered, below the canvas. It is the WebGL fallback
    and the text equivalent at the same time -- the states are evidence, so they

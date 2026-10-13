@@ -15,7 +15,6 @@
   "dependencies": {
     "@mandat/protocol": "workspace:*",
     "@mandat/three-light": "workspace:*",
-    "@react-three/fiber": "^9.8.1",
     "gsap": "^3.13.0",
     "lenis": "^1.1.18",
     "next": "^15.1.0",

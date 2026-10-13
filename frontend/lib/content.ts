@@ -145,7 +145,7 @@ export const AGENT = {
  * the whole thing: nothing an agent acts on skips a step in it.
  */
 export const FINALITY = {
-    words: ['ASKED FOR', 'OWNER AGREED', 'MADE REAL', 'CONFIRMED'],
+    words: ['ASKED', 'AGREED', 'DONE', 'VERIFIED'],
     title: 'nothing moves',
     titleAccent: 'until the chain says so.',
     lampsLabel: 'live, from the chain',

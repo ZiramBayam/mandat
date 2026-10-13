@@ -33,19 +33,14 @@ import { COMMIT_STATES, FINALITY } from '@/lib/content';
 gsap.registerPlugin(ScrollTrigger);
 
 /**
- * How much scroll the pinned sweep is given, and also how tall the runway
- * beneath it is.
+ * How long the section stays pinned, in pixels.
  *
- * They have to be the same number for a reason that is not obvious. ScrollTrigger
- * pins by fixing the element and growing a spacer, but it will not grow that
- * spacer past the bottom of the document -- if there is not enough room left to
- * scroll, it silently clamps the pin to zero. With every section exactly one
- * screen tall this section is at the end of the page, so there was never enough
- * runway: the pin reported as configured, left a pin-spacer behind, and did
- * nothing at all. The explicit runway below is what gives it somewhere to go.
- *
- * 1400 rather than the 2500 the source used, for the same reason as before --
- * two and a half thousand pixels of scrubbing is long enough to skim past.
+ * This is the only thing left of a runway element that used to sit here. The
+ * runway was 1400px of empty document height added below the section so the pin
+ * would have somewhere to pin to, back when this section was the last thing on
+ * the page. It is not the last thing any more, and ScrollTrigger's own
+ * pinSpacing supplies exactly the height the pin needs -- which is what the
+ * source relies on, having no runway of its own.
  */
 const RUNWAY = 1400;
 
@@ -77,35 +72,108 @@ export default function FinalitySection() {
                 '.horizontal-words__arrow-svg path, .horizontal-words__arrow-end-svg path',
             );
 
-            const entranceDistance = window.innerHeight * 0.6;
+            const entranceDistance = window.innerHeight;
             const pinnedDistance = RUNWAY;
 
+            /* Ported from the source's HorizontalWords.
+               The timeline starts at 'top bottom' -- when the section is still
+               below the fold -- while the pin starts at 'top top'. Keeping them
+               on one trigger made the sweep already half over by the time the
+               section reached the top, which is what made it feel like it
+               stalled. The source separates them for exactly this reason. */
             const scrollTween = gsap.timeline({
                 scrollTrigger: {
                     trigger: container,
-                    start: 'top top',
+                    start: 'top bottom',
                     end: () => `+=${entranceDistance + pinnedDistance}`,
-                    // Hold the section for the whole sweep. Without this the page
-                    // simply moves on and the word is left mid-flight.
-                    pin: true,
-                    anticipatePin: 1,
                     scrub: 1,
                     invalidateOnRefresh: true,
                 },
             });
 
             scrollTween
-                .fromTo(textRef, { x: window.innerWidth }, { x: 0, ease: 'none', duration: entranceDistance })
-                .to(letters, { yPercent: -100, stagger: 0.02, ease: 'none', duration: pinnedDistance }, '<')
-                .fromTo(stickers, { y: 0, opacity: 1 }, { y: -30, opacity: 0, stagger: 0.05, duration: 0.6, ease: 'power2.out' }, 0)
-                .fromTo(arrows, { strokeDashoffset: 1000 }, { strokeDashoffset: 0, duration: 1.5, ease: 'power2.out' }, 0);
+                .fromTo(textRef, {
+                    x: window.innerWidth,
+                }, {
+                    x: window.innerWidth * 0.5,
+                    ease: 'none',
+                    duration: entranceDistance,
+                })
+                .to(textRef, {
+                    x: () => -(textRef.scrollWidth - window.innerWidth * 0.5),
+                    ease: 'none',
+                    duration: pinnedDistance,
+                });
+
+            // Pin on its own, so it locks only once the section reaches the top.
+            ScrollTrigger.create({
+                trigger: container,
+                start: 'top top',
+                end: () => `+=${pinnedDistance}`,
+                pin: true,
+                pinSpacing: true,
+                invalidateOnRefresh: true,
+            });
+
+            /* Each letter gets its own trigger bound to the parent timeline, so
+               it settles as the text reaches the middle. This is the effect the
+               section is for: letters arrive scattered and elastic.out into a
+               sentence. The previous version had no per-letter animation at all,
+               only a yPercent tween that flew them away again -- the opposite. */
+            letters.forEach((letter) => {
+                gsap.from(letter, {
+                    yPercent: (Math.random() - 0.5) * 500,
+                    rotation: (Math.random() - 0.5) * 60,
+                    ease: 'elastic.out(1.2, 1)',
+                    scrollTrigger: {
+                        trigger: letter,
+                        containerAnimation: scrollTween,
+                        start: 'left 90%',
+                        end: 'left 50%',
+                        scrub: 0.5,
+                    },
+                });
+            });
+
+            stickers.forEach((sticker) => {
+                gsap.from(sticker, {
+                    scale: 0,
+                    yPercent: (Math.random() - 0.5) * 400,
+                    rotation: (Math.random() - 0.5) * 60,
+                    ease: 'elastic.out(1.2, 1)',
+                    scrollTrigger: {
+                        trigger: sticker,
+                        containerAnimation: scrollTween,
+                        start: 'left 90%',
+                        end: 'left 50%',
+                        scrub: 0.5,
+                    },
+                });
+            });
+
+            arrows.forEach((arrowPath) => {
+                if (arrowPath.getTotalLength) {
+                    const pathLen = arrowPath.getTotalLength();
+                    gsap.set(arrowPath, { strokeDasharray: pathLen, strokeDashoffset: pathLen });
+                    gsap.to(arrowPath, {
+                        strokeDashoffset: 0,
+                        duration: 1,
+                        scrollTrigger: {
+                            trigger: arrowPath.parentElement,
+                            containerAnimation: scrollTween,
+                            start: 'left 90%',
+                            end: 'left 50%',
+                            scrub: 0.5,
+                        },
+                    });
+                }
+            });
         }, sectionRef);
 
         return () => ctx.revert();
     }, []);
 
     return (
-        <>
         <section ref={sectionRef} className="horizontal-words-section" id="finality">
             <div className="horizontal-words__relative">
                 <div className="horizontal-words__sticker-svg">
@@ -175,10 +243,5 @@ export default function FinalitySection() {
             </div>
 
         </section>
-
-        {/* Scroll runway. Not visible and not styled -- it exists so the pin
-            above has somewhere to be pinned to. See RUNWAY. */}
-        <div className="finality-runway" style={{ height: RUNWAY }} aria-hidden="true" />
-        </>
     );
 }

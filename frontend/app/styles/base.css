@@ -76,10 +76,10 @@
        colour vision deficiency even before the shape markers are considered.
        That is why the ramp is inverted from a dark theme, where it ran the
        other way to get the same ordering. */
-    --commit-proposed: #a89f96;
-    --commit-voted: #b8860b;
-    --commit-finalized: #2f855a;
-    --commit-verified: #2b6cb0;
+    --commit-proposed: #d8cec2;
+    --commit-voted: #ffc94d;
+    --commit-finalized: #5fd39a;
+    --commit-verified: #6cb6ff;
 }
 
 /* ─── Reset ─────────────────────────────────────────────────────────────────── */

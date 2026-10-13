@@ -11,5 +11,5 @@ export {
 } from './rig';
 
 export { SmoothScroll, ScrollTo, getLenis } from './smoothScroll';
-export { CommitLamps, LampsFallback } from './CommitLamps';
+export { CommitLamps, CommitLampShapes } from './CommitLamps';
 export { MONAD_TESTNET_CHAIN, MONAD_MAINNET_CHAIN, viemChain } from '../chain/viemChain';
