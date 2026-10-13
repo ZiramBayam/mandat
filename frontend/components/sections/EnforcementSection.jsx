@@ -25,6 +25,43 @@ import { ENFORCEMENT, EVIDENCE } from '@/lib/content';
 
 gsap.registerPlugin(ScrollTrigger);
 
+/**
+ * Hover spacing, from the reference (ServiceCards.jsx:126-128, 144, 149). The
+ * first card out clears the hovered one by HOVER_GAP; every card after that
+ * steps CLUSTER_GAP, which is under half a card wide, so the ones that are not
+ * hovered overlap each other and stay a fan instead of lining up.
+ */
+const HOVER_GAP = 120;
+const CLUSTER_GAP = 150;
+const CARD_WIDTH = 320;
+
+/** The hovered card rises here and squares up, whatever its own top was. */
+const TARGET_COMMON_TOP = 50;
+
+/**
+ * Reads a card's resting tilt out of its stylesheet rotate(), in degrees.
+ *
+ * The reference hardcodes the same four numbers as `originalData`. Parsing the
+ * computed matrix keeps cards.css the single source of truth, and it is also
+ * right in the range where the tilt does not exist: between 769px and 1348px the
+ * stylesheet resets transform to none, so this returns 0 -- which is exactly
+ * what is on screen there, and what the card springs back to.
+ *
+ * A 2D matrix is [a, b, c, d, e, f] and the rotation is atan2(b, a).
+ */
+function restingRotation(el) {
+    const transform = getComputedStyle(el).transform;
+    if (!transform || transform === 'none') return 0;
+
+    const matrix = transform.match(/matrix\(([^)]+)\)/);
+    if (!matrix) return 0;
+
+    const [a, b] = matrix[1].split(',').map(Number);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return 0;
+
+    return Math.round(Math.atan2(b, a) * (180 / Math.PI));
+}
+
 export default function EnforcementSection() {
     const rootRef = useRef(null);
 
@@ -55,36 +92,87 @@ export default function EnforcementSection() {
 
             if (window.matchMedia('(max-width: 768px)').matches) return;
 
-            // No spread, no pull-out. The source leaves a clean 120px gap
-            // between the hovered card and its neighbours, which is a deliberate
-            // pull-forward effect and reads correctly over a row of
-            // photographs. Over cards this size it just reads as the outer one
-            // stranded on its own, which is exactly what it kept doing here.
-            // The cards stay a pile; hovering only lifts one on top.
+            // Tilt and spacing both belong to the stylesheet: cards.css sets a
+            // rotate() per card and mandat.css sets the row's positions. The
+            // tilt is read back here so there is a single source of truth, and
+            // captured before any hover so the leave handler still knows what
+            // "straight" means after the hovered card has been squared up.
+            const rest = cards.map((card, i) => ({
+                card,
+                rotation: restingRotation(card),
+                top: card.offsetTop,
+                z: i + 1,
+            }));
 
-            // Tilt and spacing both belong to the stylesheet -- cards.css sets a
-            // rotate() per card, and the row's positions are in mandat.css.
-            // Nothing here needs to set a starting rotation.
             cards.forEach((card, index) => {
-                const restZ = index + 1;
-
                 const onEnter = () => {
+                    const hovered = rest[index];
+
+                    // The card under the pointer squares up and comes forward.
+                    // This is what makes the gap left behind read as a card
+                    // being pulled out rather than a hole in the row: one card
+                    // goes straight and sits in front while its neighbours keep
+                    // their tilt and slide aside.
                     gsap.to(card, {
-                        scale: 1.04,
+                        x: 0,
+                        y: TARGET_COMMON_TOP - hovered.top,
+                        rotation: 0,
+                        scale: 1.08,
                         zIndex: 20,
-                        duration: 0.4,
-                        ease: 'power2.out',
-                        overwrite: 'auto',
+                        duration: 0.9,
+                        ease: 'elastic.out(1, 0.5)',
+                        overwrite: true,
                     });
+
+                    // Offsets are measured from the hovered card rather than from
+                    // each card's own resting position, which is how the
+                    // reference does it. The two only agree when the row is
+                    // evenly spaced, and this one is not -- the four slots step
+                    // 220, 210 and 270. Done the reference's way, hovering the
+                    // first card puts the others at +220, +160 and +40, so the
+                    // last two cross back over the second.
+                    const push = (entries, direction) => {
+                        entries.forEach((entry, i) => {
+                            const targetX = direction * (CARD_WIDTH + HOVER_GAP + i * CLUSTER_GAP);
+                            const angle = (entry.rotation * Math.PI) / 180;
+                            gsap.to(entry.card, {
+                                x: targetX,
+                                y: targetX * Math.tan(angle),
+                                rotation: entry.rotation,
+                                scale: 1,
+                                duration: 1.0,
+                                ease: 'elastic.out(1, 0.5)',
+                                overwrite: true,
+                            });
+                        });
+                    };
+
+                    const after = rest.slice(index + 1);
+                    const before = rest.slice(0, index).reverse();
+                    if (after.length) push(after, 1);
+                    if (before.length) push(before, -1);
                 };
 
                 const onLeave = () => {
-                    gsap.to(card, {
-                        scale: 1,
-                        zIndex: restZ,
-                        duration: 0.5,
-                        ease: 'power2.out',
-                        overwrite: 'auto',
+                    // Every card returns to its own slot, tilt and stacking
+                    // order. The 80ms delay is the reference's: moving the
+                    // pointer onto a neighbouring card fires this and then that
+                    // card's enter in the same tick, and the later spread's
+                    // overwrite:true discards these tweens before they play. It
+                    // is only when the pointer leaves the row for good that they
+                    // actually run.
+                    rest.forEach((entry) => {
+                        gsap.to(entry.card, {
+                            x: 0,
+                            y: 0,
+                            scale: 1,
+                            rotation: entry.rotation,
+                            zIndex: entry.z,
+                            duration: 1.0,
+                            ease: 'elastic.out(1, 0.5)',
+                            overwrite: true,
+                            delay: 0.08,
+                        });
                     });
                 };
 
