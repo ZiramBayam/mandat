@@ -387,44 +387,46 @@
 }
 
 /* ─── Enforcement card row ────────────────────────────────────────────────────
-   cards.css lays this row out as five absolute positions:
+   cards.css lays this row out as five absolute positions, a tight fan 220, 210
+   and then 270px apart, each card overlapping the next:
 
-     .card-green     left: calc(50% - 650px)   top: 50px
-     .card-darkblue  left: calc(50% - 430px)   top: 100px
-     .card-orange    left: calc(50% - 220px)   top:  20px
-     .card-maroon    left: calc(50% +  50px)   top:  30px
-     .card-pink      left: calc(50% + 320px)   top:  70px
+     .card-green     left: calc(50% - 650px)
+     .card-darkblue  left: calc(50% - 430px)
+     .card-orange    left: calc(50% - 220px)
+     .card-maroon    left: calc(50% +  50px)
+     .card-pink      left: calc(50% + 320px)
 
-   Four cards are rendered, using green, darkblue, orange and pink -- which skips
-   the maroon slot. So the row did not end 540px after its third card, where the
-   neighbouring cards are 210 to 270px apart, and the last one sat out on its own
-   in empty space. It also did not start centred: -650px is tuned for a row of
-   five, so the first card ended up hard against the left edge with roughly
-   290px of nothing on the right.
+   Four cards are rendered, and they used to be green, darkblue, orange and
+   pink -- which skips the maroon slot. So the row went -650, -430, -220 and
+   then jumped to +320: a 540px step where its neighbours take 210 to 270, and
+   the last card sat out on its own. That skip was the whole gap; the fan
+   rhythm itself was never the problem.
 
-   Four slots on one even step, centred. The leftmost card's left edge and the
-   last card's right edge are both 475px from the centre, and every gap is 210px.
-   A 210px step on a 320px card overlaps by 110px, which is the same overlap the
-   source's own spacing produces.
+   Taking the first four positions gives the source's own spacing back: 220,
+   210, 270. Nothing about the overlap is changed, and the fourth card is now
+   .card-maroon rather than .card-pink, which is what stops the skip.
 
-   The source's vertical stagger (top: 50/100/20/70) is left alone -- that part
-   is deliberate and reads as intentional. The rotation stays in the stylesheet
-   too, per card.
+   The source balances -650 against +320, which centres a five-card row. Four
+   cards reach only +370, so the row as written sits 140px left of the wrapper's
+   centre. Every position therefore carries the same +140px. Nothing else about
+   the spacing is touched.
+
+   The vertical stagger and the per-card tilt stay in the stylesheet, untouched.
 ──────────────────────────────────────────────────────────────────────────── */
 .card-green {
-    left: calc(50% - 475px);
+    left: calc(50% - 510px);
 }
 
 .card-darkblue {
-    left: calc(50% - 265px);
+    left: calc(50% - 290px);
 }
 
 .card-orange {
-    left: calc(50% - 55px);
+    left: calc(50% - 80px);
 }
 
-.card-pink {
-    left: calc(50% + 155px);
+.card-maroon {
+    left: calc(50% + 190px);
 }
 
 /* ─── Live feed ───────────────────────────────────────────────────────────── */

@@ -97,7 +97,7 @@ export const ENFORCEMENT = {
             ],
         },
         {
-            color: 'pink',
+            color: 'maroon',
             sticker: 'heart',
             title: 'Your call',
             items: [
