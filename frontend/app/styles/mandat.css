@@ -580,3 +580,157 @@
 .Double-marquee {
     gap: clamp(3rem, 7vw, 8rem);
 }
+
+/* ─── "Run it yourself" ──────────────────────────────────────────────────────
+   Last section on the page. It sits between the marquee and the footer, and all
+   three are the same background colour, so there is no seam to hide -- but that
+   also means this block has to carry itself with type and spacing alone.
+
+   The heading and the bullets are borrowed: .title-container and .main-title
+   from hero.css, .card-list from cards.css. Only the command column is new,
+   and it is monospace because these are things to paste, not things to read.
+──────────────────────────────────────────────────────────────────────────── */
+.use-it {
+    padding: clamp(4rem, 10svh, 8rem) clamp(1.5rem, 6vw, 6rem);
+}
+
+.use-it .title-container {
+    margin-bottom: clamp(2.5rem, 6svh, 4.5rem);
+}
+
+.use-it__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: clamp(2rem, 5vw, 5rem);
+    max-width: 1240px;
+    margin: 0 auto;
+    align-items: start;
+}
+
+.use-it__subhead {
+    font-family: 'Epilogue', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin: 0 0 1.5rem;
+}
+
+/* The parts list reuses the diamond bullet but drops the size the cards need --
+   these sit two to a line under a name, not in a coloured panel. */
+.use-it__parts {
+    margin: 0;
+}
+
+.use-it__parts li {
+    margin-bottom: 1.35rem;
+    font-size: 1rem;
+    line-height: 1.45;
+}
+
+.use-it__parts li > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.use-it__part-name {
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.use-it__part-what {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 450;
+    color: var(--text-secondary);
+}
+
+.use-it__footnote {
+    margin: 2rem 0 0;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.92rem;
+    font-style: italic;
+    color: var(--text-secondary);
+    max-width: 30ch;
+}
+
+.use-it__steps {
+    list-style: none;
+    counter-reset: useit;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+}
+
+.use-it__step {
+    counter-increment: useit;
+    display: grid;
+    grid-template-columns: 1.75rem minmax(0, 1fr);
+    gap: 0 0.9rem;
+    align-items: baseline;
+}
+
+/* A plain counter rather than a styled badge: these are instructions, and a
+   number that looks like a button invites a click. */
+.use-it__step::before {
+    content: counter(useit);
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    opacity: 0.65;
+}
+
+.use-it__cmd {
+    grid-column: 2;
+    display: block;
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: var(--text-primary);
+    background: var(--color-black-deep);
+    border-radius: 8px;
+    padding: 0.7rem 0.9rem;
+    /* These get pasted. A break anywhere would corrupt them. */
+    overflow-wrap: normal;
+    word-break: keep-all;
+}
+
+.use-it__note {
+    grid-column: 2;
+    margin-top: 0.5rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.use-it__more {
+    margin: 1.75rem 0 0;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.98rem;
+    color: var(--text-secondary);
+}
+
+.use-it__more a {
+    color: var(--text-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+/* The two columns are a grid above, so stacking is the only thing that has to
+   change. The command column goes first on a narrow screen because it is the
+   part a reader on a phone can actually act on. */
+@media (max-width: 900px) {
+    .use-it__grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .use-it__col--steps {
+        order: -1;
+    }
+}

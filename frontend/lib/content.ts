@@ -138,6 +138,69 @@ export const AGENT = {
 } as const;
 
 /**
+ * The practical half.
+ *
+ * Everything above this page explains what the system does. Nothing on it said
+ * how to run it -- which is the question a reader actually arrives with, and
+ * the one the page was built to raise an answer to. The commands are the README's
+ * in the README's order, because the order is load-bearing: without
+ * `git submodule update` the contracts do not build, and without the four
+ * private keys `g6` exits before it sends anything.
+ *
+ * Deliberately only the two G6 steps. `watch`, `explorer lineage` and
+ * `seller-check` are one line of copy away in the README, and five steps of a
+ * stranger's shell is a wall -- three is a door.
+ */
+export const USE_IT = {
+    title: 'run it',
+    titleAccent: 'yourself.',
+    parts: [
+        {
+            name: 'AuthorityRegistry',
+            what: 'the authority graph. revoking a parent kills the whole subtree, on chain.',
+        },
+        {
+            name: '@mandat/envelope-cli',
+            what: 'a SKILL.md becomes a delegation with caveats hashed into it.',
+        },
+        {
+            name: '@mandat/three-light',
+            what: 'the commitState gate. a resource is released only once the lamps light.',
+        },
+        {
+            name: '@mandat/protocol',
+            what: 'one encoding of the terms, shared by the contract, the CLI and the seller.',
+        },
+    ],
+    steps: [
+        {
+            cmd: 'git submodule update --init --recursive',
+            note: '12 pinned submodules. DTK and OpenZeppelin. Without them forge test does not build.',
+        },
+        {
+            cmd: 'pnpm install',
+            note: 'Needs Node 22 or newer, pnpm, and Foundry.',
+        },
+        {
+            cmd: 'cp contracts/.env.example contracts/.env',
+            note: 'That file is the authoritative one. Fill in the four private keys.',
+        },
+        {
+            cmd: 'cd packages/authority-header && pnpm g6 within',
+            note: '0.1 WMON against a 0.5 cap. Mined, succeeded, the balance moved.',
+        },
+        {
+            cmd: 'pnpm g6 over',
+            note: '0.8 WMON against the same cap. Mined, reverted. 900k gas, nothing moved.',
+        },
+    ],
+    more: 'plus watch, explorer lineage and seller-check',
+    readmeLabel: 'the full README',
+    readmeHref: 'https://github.com/ZiramBayam/mandat#running-it',
+    repoHref: 'https://github.com/ZiramBayam/mandat',
+} as const;
+
+/**
  * Scene 4 -- finality.
  *
  * The scrolling words are the four states, because that sequence is the spine of

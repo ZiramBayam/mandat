@@ -190,6 +190,9 @@ export default function Footer() {
                     <a href="https://testnet.monadvision.com" className="footer-whatsapp" target="_blank" rel="noreferrer">
                         every transaction, on chain
                     </a>
+                    <a href="https://mandat-agent.vercel.app" className="footer-demo" target="_blank" rel="noreferrer">
+                        mandat-agent.vercel.app
+                    </a>
                     <p className="footer-note">
                         Testnet only. Nothing here is audited and nothing here holds real value.
                     </p>

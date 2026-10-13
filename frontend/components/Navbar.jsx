@@ -12,6 +12,7 @@ const SECTIONS = [
     { id: '#enforcement', label: 'enforcement' },
     { id: '#agent', label: 'agent' },
     { id: '#finality', label: 'finality' },
+    { id: '#use-it', label: 'use it' },
 ];
 
 function initWiggle(element, intensity) {

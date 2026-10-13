@@ -33,15 +33,20 @@ gsap.registerPlugin(ScrollTrigger);
  * as a hole rather than a separation. At 24px the pushed card clears the front
  * card by a visible margin without the row coming apart.
  *
- * CLUSTER_GAP steps every card after that, and stays under half a card wide so
- * the ones that are not hovered overlap each other and stay a fan. It cannot go
- * to CARD_WIDTH + gap like the first one does: four cards 320px wide laid out
- * without a single overlap need 4x320 + 3x24 = 1352px, so pointing at the
- * outermost card would push the last one clean off a 1366px screen. The two
- * cards nearest the pointer separate; the ones behind them lean.
+ * CLUSTER_GAP steps every card after that. The reference uses 150, which is
+ * under half a card wide, so the cards that are not hovered overlap each other
+ * and stay a fan. At this row's size that read as too much travel: the outermost
+ * card landed 740px from the pointed-at one, a 964px spread across a 1326px
+ * wrapper. At 40 the spread is 744px, the cards still overlap heavily, and the
+ * step stays under a quarter of a card so the cluster never fans out.
+ *
+ * It cannot go to CARD_WIDTH + gap the way the first one does: four 320px cards
+ * with no overlap at all need 4x320 + 3x24 = 1352px, so pointing at the outermost
+ * card would push the last one clean off a 1366px screen. The two cards nearest
+ * the pointer separate; the ones behind them lean.
  */
 const HOVER_GAP = 24;
-const CLUSTER_GAP = 150;
+const CLUSTER_GAP = 40;
 const CARD_WIDTH = 320;
 
 /** The hovered card rises here and squares up, whatever its own top was. */

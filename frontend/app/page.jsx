@@ -29,6 +29,7 @@ import AuthoritySection from '@/components/sections/AuthoritySection';
 import LiveFeed from '@/components/sections/LiveFeed';
 import EnforcementSection from '@/components/sections/EnforcementSection';
 import AgentSection from '@/components/sections/AgentSection';
+import UseItSection from '@/components/sections/UseItSection';
 import Footer from '@/components/Footer';
 
 export default function Home() {
@@ -54,6 +55,7 @@ export default function Home() {
             <section className="Double-marquee">
                 <AgentSection />
             </section>
+            <UseItSection />
             <footer className="main-footer">
                 <Footer />
             </footer>
