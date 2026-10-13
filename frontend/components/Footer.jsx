@@ -224,34 +224,6 @@ export default function Footer() {
                         <img src="/assets/Footer-Sticker SVG/footer-sticker-boom.svg" width="100%" alt="" data-scroll-animation-target="" aria-hidden="true" />
                     </div>
                 </div>
-
-                {/* Bottom row: credits */}
-                <div className="footer-bottom-row">
-                    <div></div>
-                    <div className="footer-credits-wrapper">
-                        <div className="credits-box">
-                            <div className="credits-content">
-                                <div className="credits-item credit-wiggle">
-                                    <div className="overflow-wrapper"><span className="credits-label">visual layer adapted from</span></div>
-                                    <div className="overflow-wrapper">
-                                        <a
-                                            href="https://github.com/Thakuma07/Truus.co-Awwward-Website"
-                                            className="credits-name"
-                                            data-wiggle-target="true"
-                                            target="_blank"
-                                            rel="noreferrer"
-                                        >truus.co clone</a>
-                                    </div>
-                                </div>
-                                <div className="credits-item credit-wiggle">
-                                    <div className="overflow-wrapper"><span className="credits-label">everything else by</span></div>
-                                    <div className="overflow-wrapper"><span className="credits-name">mandat</span></div>
-                                </div>
-                            </div>
-                        </div>
-                        <a href="#" className="footer-credits">credits</a>
-                    </div>
-                </div>
             </div>
         </div>
     );
