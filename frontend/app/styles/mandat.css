@@ -96,12 +96,18 @@
     padding: 12vh 6vw;
 }
 
+/* Foot of the live feed panel now, not a strip floating under the refusal
+   cards. Left-aligned to match the rest of the panel's contents, with a rule
+   above it so it reads as the last row of that panel rather than a loose pair
+   of buttons. */
 .evidence-strip {
     display: flex;
     flex-wrap: wrap;
     gap: 0.9rem;
-    margin-top: 2.5rem;
-    justify-content: center;
+    margin-top: 1.75rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-subtle);
+    justify-content: flex-start;
 }
 
 .evidence-chip {
@@ -531,27 +537,20 @@
     height: min(550px, 58svh);
 }
 
-/* The wrapper is a fixed 650px because in the source it holds absolutely
-   positioned cards that a script fans out on hover. The cards are 486px tall and
-   sit 20-100px from the top, so roughly 64px at the bottom is always empty and
-   the wrapper is a box taller than its contents. min() keeps the source's
-   height where it fits and gives the slack back where it does not.
+/* The wrapper holds four absolutely positioned cards. The lowest of them --
+   .card-darkblue, at top:100px and rotated -5 degrees -- has a bounding box
+   reaching y=573px, because a 320x460 card turned 5 degrees is 486px tall and
+   its centre sits 330px down. The old height was min(650px, 74svh), which is
+   470px on a 635px-tall laptop, so the cards ran about 103px past the bottom
+   of the wrapper. The evidence chips used to sit right there and were covered;
+   with those moved to the live feed the marquee section would have been next.
 
-   The evidence chips sit immediately after it, and they were landing under the
-   cards: at 1366x635 the wrapper is 470px and a card is 460px, leaving 5px of
-   slack, and a card tilted 8 degrees is 32px wider than it is tall at each end,
-   so the bottom card reached about 11px past the wrapper -- straight over chips
-   that had only 16px of clearance. The rotation is set in JS now, so this is
-   the full amount a card can protrude; the clamp keeps that much back plus
-   breathing room, and still gives the margin up on a tall screen. */
+   600px is the height that actually contains them. */
 .cards-wrapper {
-    height: min(650px, 74svh);
+    height: clamp(600px, 74svh, 650px);
     margin: clamp(2rem, 6svh, 100px) auto;
 }
 
-.cards-wrapper + .evidence-strip {
-    margin-top: clamp(2rem, 9svh, 6rem);
-}
 
 /* ─── Marquee arrow ──────────────────────────────────────────────────────────
    The source draws its arrow at left:70% with a width of 350px inside a 420px

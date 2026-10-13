@@ -33,14 +33,35 @@ export default function VimeoHero() {
             return;
         }
 
-        gsap.from(words, {
-            opacity: 0,
-            yPercent: 60,
-            duration: 1.1,
-            stagger: 0.12,
-            ease: 'power3.out',
-            delay: 0.4,
-        });
+        let timer = null;
+        const run = () => {
+            if (timer) return;
+            timer = true;
+            gsap.from(words, {
+                opacity: 0,
+                yPercent: 60,
+                duration: 1.1,
+                stagger: 0.12,
+                ease: 'power3.out',
+            });
+        };
+
+        // The arrival veil covers the screen for the first few seconds. Run on
+        // mount, this animation would play behind it and be finished before
+        // anyone saw it, so the words would simply appear already settled.
+        // TransitionScribble announces when the veil starts clearing.
+        window.addEventListener('mandat:reveal', run, { once: true });
+
+        // And if it never does -- reduced motion takes a different path through
+        // that component, and a script error upstream would skip the dispatch --
+        // the headline still has to arrive. It is the largest text on the page;
+        // it cannot be left at opacity 0.
+        const failsafe = setTimeout(run, 5000);
+
+        return () => {
+            window.removeEventListener('mandat:reveal', run);
+            clearTimeout(failsafe);
+        };
     }, []);
 
     return (

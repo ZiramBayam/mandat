@@ -50,6 +50,36 @@
     font-family: 'Satisfy', cursive;
 }
 
+/* ─── Arrival veil ───────────────────────────────────────────────────────────
+   A flat cover for the first few seconds: the word is drawn on top of it and
+   the site sits underneath unseen until the veil clears.
+
+   It collapses toward its own TOP edge, which means its bottom edge travels
+   upward and the page is uncovered from the bottom of the screen first. origin
+   bottom would do the opposite.
+
+   Under reduced motion it never appears at all. An opaque overlay held for four
+   seconds is precisely what that setting exists to prevent, so display:none
+   here is not a fallback -- the stylesheet has to be the one deciding, because
+   the overlay is in the server-rendered markup and would otherwise cover the
+   page before any script runs.
+──────────────────────────────────────────────────────────────────────────── */
+.transition-veil {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    background: var(--bg-color);
+    transform: scaleY(1);
+    transform-origin: top center;
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .transition-veil {
+        display: none;
+    }
+}
+
 /* ─── Transition States ──────────────────────────────────────────────────── */
 body.is-transitioning {
     pointer-events: none !important;

@@ -21,7 +21,7 @@
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useEffect, useRef } from 'react';
-import { ENFORCEMENT, EVIDENCE } from '@/lib/content';
+import { ENFORCEMENT } from '@/lib/content';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -255,17 +255,6 @@ export default function EnforcementSection() {
                         </ul>
                     </div>
                 ))}
-            </div>
-
-            <div className="evidence-strip">
-                <a className="evidence-chip evidence-chip--pass" href={EVIDENCE.g6Within.href} target="_blank" rel="noreferrer">
-                    <span className="evidence-chip__label">{EVIDENCE.g6Within.label}</span>
-                    <span className="evidence-chip__value">{EVIDENCE.g6Within.value}</span>
-                </a>
-                <a className="evidence-chip evidence-chip--fail" href={EVIDENCE.g6Over.href} target="_blank" rel="noreferrer">
-                    <span className="evidence-chip__label">{EVIDENCE.g6Over.label}</span>
-                    <span className="evidence-chip__value">{EVIDENCE.g6Over.value}</span>
-                </a>
             </div>
         </section>
     );

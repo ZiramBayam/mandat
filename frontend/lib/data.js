@@ -28,7 +28,12 @@ export const ANIMATION_CONFIG = {
         strokeWidthStart: "8%",
         strokeWidthMax: "31%",
         scale: 0.7,
-        durationIn: 2.2,
-        durationOut: 2.7
+        // Writing and erasing the word, then the HOLD between them and the RECEDE
+        // of the veil, are in TransitionScribble.jsx. The arrival runs
+        // 0.6s waiting for the face + durationIn + HOLD + durationOut + RECEDE,
+        // which is 4.3s at these values. At the previous 2.2 and 2.7 it was
+        // 6.8s, and every one of those seconds had a blank screen over it.
+        durationIn: 1.4,
+        durationOut: 1.0
     }
 };

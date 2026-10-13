@@ -22,7 +22,7 @@ import { useState } from 'react';
 import { useCommitFeed } from '@/lib/chain';
 import { CommitLamps, CommitLampShapes } from '@/lib/motion/CommitLamps';
 import { COMMIT_STATES as RIG_STATES } from '@/lib/motion/rig';
-import { COMMIT_STATES, FINALITY } from '@/lib/content';
+import { COMMIT_STATES, EVIDENCE, FINALITY } from '@/lib/content';
 
 export default function LiveFeed() {
     const feed = useCommitFeed();
@@ -92,6 +92,25 @@ export default function LiveFeed() {
                         <dd>{feed.lastCommitState ?? 'unknown'}</dd>
                     </div>
                 </dl>
+
+                {/* Two recorded transactions rather than live ones, so they sit
+                    at the foot of the panel rather than above the lamp strip:
+                    everything above them is what the chain is saying right now,
+                    these two are what it said when it was run deliberately. They
+                    were under the enforcement section, where they were literal
+                    evidence for the cards above them, but four saturated cards
+                    and two small chips in one section fought each other and the
+                    chips lost -- they ended up behind the cards. */}
+                <div className="evidence-strip">
+                    <a className="evidence-chip evidence-chip--pass" href={EVIDENCE.g6Within.href} target="_blank" rel="noreferrer">
+                        <span className="evidence-chip__label">{EVIDENCE.g6Within.label}</span>
+                        <span className="evidence-chip__value">{EVIDENCE.g6Within.value}</span>
+                    </a>
+                    <a className="evidence-chip evidence-chip--fail" href={EVIDENCE.g6Over.href} target="_blank" rel="noreferrer">
+                        <span className="evidence-chip__label">{EVIDENCE.g6Over.label}</span>
+                        <span className="evidence-chip__value">{EVIDENCE.g6Over.value}</span>
+                    </a>
+                </div>
             </div>
         </section>
     );
