@@ -178,12 +178,11 @@
     padding: 0;
 }
 
-.marquee-subtitle {
-    font-family: 'Epilogue', sans-serif;
-    font-size: clamp(1rem, 1.8vw, 1.3rem);
-    color: var(--text-secondary);
-    margin: 1rem 0 0;
-}
+/* A .marquee-subtitle rule used to sit here, for a "what it does:" line between
+   the h2 and the underline. The reference has no such element -- its h2 is
+   followed straight by the underline svg -- and because the blob and its arrow
+   are positioned absolutely at top:55%, inserting a third line of text grew the
+   text block until the arrow was drawn across it. */
 
 .agent-closing {
     grid-column: 1 / -1;
@@ -267,6 +266,46 @@
 .commit-panel--finalized .commit-card__marker { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
 .commit-panel--verified .commit-card__marker { border-radius: 50%; background: transparent; box-shadow: inset 0 0 0 4px #1a1a1a; }
 
+/* ─── Floating stickers over the commit cards ─────────────────────────────────
+   The source floats three short sticker captions over four overlapping cards.
+   There the cards are photographs, so a caption sliding across the seam
+   between two of them is decorative. These are sentences on text cards, and
+   measured at 1175px the captions were 232px, 201px and 159px wide against a
+   visible sliver of about 120px per card -- so every one of them crossed two
+   or three seams and landed on the copy underneath, and the third, anchored at
+   left:89%, fell off the end of the last card entirely.
+
+   Two changes. The cards carry their label at the top and nothing below it, so
+   the captions move down into the empty half of each card, where crossing a
+   seam costs nothing. And each is anchored to a different card's sliver --
+   measured as 39% / 56% / 72% of the area -- stepping down as they go so the
+   three of them never share a line.
+
+   nowrap is dropped so a caption wraps inside its own card rather than
+   trailing across the one beside it.
+──────────────────────────────────────────────────────────────────────────── */
+.motion-card__floating-label {
+    white-space: normal;
+    max-width: 12rem;
+    text-align: center;
+    line-height: 1.25;
+}
+
+.motion-card__floating-label--pink {
+    top: 46%;
+    left: 39%;
+}
+
+.motion-card__floating-label--orange {
+    top: 59%;
+    left: 56%;
+}
+
+.motion-card__floating-label--red {
+    top: 72%;
+    left: 72%;
+}
+
 /* ─── Live feed ───────────────────────────────────────────────────────────── */
 .live-feed {
     padding-bottom: 4svh;
@@ -312,10 +351,10 @@
         padding: 1.25rem;
     }
 
-    .commit-lamps {
-        height: 220px;
-    }
-
+    /* The row of lamps used to be a <canvas> per panel, which needs a fixed
+       height to exist at all. They are inline SVG sized with height:auto now,
+       so they are 87px tall, and this turned into 133px of empty space between
+       the lamps and the commit list below them on every short laptop. */
     .state-detail {
         min-height: 0;
     }
@@ -372,6 +411,13 @@
    height where it fits and gives the slack back where it does not. */
 .cards-wrapper {
     height: min(650px, 74svh);
+    /* 100px top and bottom, from the source. The cards are 460px tall and
+       absolutely positioned inside a wrapper that is 74svh, so the slack left
+       by that centring lands on top of this margin -- which is what put ~170px
+       between the heading and the first card on a 635px-tall laptop, with the
+       cards then running off the bottom of the screen. clamp() keeps the
+       source's 100px wherever there is room for it. */
+    margin: clamp(2rem, 6svh, 100px) auto;
 }
 
 /* ─── Marquee arrow ──────────────────────────────────────────────────────────

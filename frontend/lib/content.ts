@@ -47,7 +47,7 @@ export const COMMIT_STATES = [
 export const AUTHORITY = {
     title: ['a permission', 'you can see.'],
     subtitle: 'capped, revocable, and checked by a contract.',
-    labels: ['it gets an allowance, not a key', 'the limit is not the money', 'asked, agreed, done'],
+    labels: ['it gets an allowance, not a key', 'the limit is not the money', 'asked is not allowed'],
     closing:
         'An agent is usually handed a wallet and trusted with it. This hands it ' +
         'an allowance instead — how much, how often, until when, and who can ' +
@@ -121,7 +121,6 @@ export const ENFORCEMENT = {
  */
 export const AGENT = {
     title: ['it reads its own', 'spending limit'],
-    marqueeLabel: 'what it does:',
     columns: [
         [
             { name: 'Checks what the agent may do', tone: 'green' },

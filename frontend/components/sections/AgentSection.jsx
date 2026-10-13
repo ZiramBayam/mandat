@@ -74,7 +74,6 @@ export default function AgentSection() {
                         {AGENT.title[1]}
                         <span className="text-with">.</span>
                     </h2>
-                    <p className="marquee-subtitle">{AGENT.marqueeLabel}</p>
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="marquee-underline"

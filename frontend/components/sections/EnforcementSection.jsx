@@ -28,6 +28,9 @@ gsap.registerPlugin(ScrollTrigger);
 /** Resting tilt per card, clockwise as the reference had them. */
 const REST_ROTATION = [4, -5, 5, -8];
 
+/** Gap between cards once they are pushed aside, in px. */
+const SPREAD_GAP = 18;
+
 export default function EnforcementSection() {
     const rootRef = useRef(null);
 
@@ -58,11 +61,27 @@ export default function EnforcementSection() {
 
             if (window.matchMedia('(max-width: 768px)').matches) return;
 
+            // The card the pointer is currently on. Every handler below used to
+            // tween all four cards unconditionally, so sweeping the cursor from
+            // one card to the next fired onLeave(A) and onEnter(B) against the
+            // same targets with overwrite:true -- whichever lost was left
+            // half-tweened. One owner at a time settles it.
+            let activeCard = null;
+
             cards.forEach((card, index) => {
                 const onEnter = () => {
+                    activeCard = card;
+
                     const cardWidth = card.offsetWidth;
                     const hoveredLeft = card.offsetLeft;
                     const targetCommonTop = 0;
+
+                    // One constant for the whole spread, used to seed the cursor
+                    // and to step it. Seeding from cardWidth and then stepping by
+                    // each neighbour's own offsetWidth let the slot drift by
+                    // whatever a card measured mid-move, which is how the outer
+                    // cards ended up visibly detached from the group.
+                    const slot = cardWidth + SPREAD_GAP;
 
                     gsap.to(card, {
                         x: 0,
@@ -76,21 +95,34 @@ export default function EnforcementSection() {
                     });
 
                     const spread = (others, direction) => {
-                        const gap = 18;
-                        let cursor = hoveredLeft + direction * (cardWidth + gap);
+                        let cursor = hoveredLeft + direction * slot;
                         others.forEach((other, i) => {
-                            const angle = (REST_ROTATION[other.dataset.cardIndex % REST_ROTATION.length] * Math.PI) / 180;
+                            const restRotation = REST_ROTATION[other.dataset.cardIndex % REST_ROTATION.length];
                             const targetX = cursor - other.offsetLeft;
                             gsap.to(other, {
                                 x: targetX,
-                                y: targetX * Math.tan(angle),
-                                rotation: REST_ROTATION[other.dataset.cardIndex % REST_ROTATION.length],
+                                // Was targetX * Math.tan(angle), which scaled the
+                                // vertical throw with how far sideways the card
+                                // landed. The outer card travels three times as
+                                // far as its neighbour, so it was also thrown
+                                // three times as far vertically -- 176px against
+                                // 37px -- and the row stopped reading as one
+                                // group. Same lean, held to a fixed range.
+                                y: gsap.utils.clamp(-64, 64, targetX * 0.08),
+                                rotation: restRotation,
                                 scale: 1,
                                 duration: 1.0,
-                                ease: 'elastic.out(1, 0.5)',
+                                // elastic.out overshoots in proportion to the
+                                // distance travelled, so the far card peaked
+                                // hundreds of pixels past its slot and was still
+                                // drifting back when you looked at it. That is
+                                // the gap that made it read as stranded. The
+                                // hovered card keeps its overshoot; a card being
+                                // pushed aside does not need one.
+                                ease: 'power3.out',
                                 overwrite: true,
                             });
-                            cursor += direction * (other.offsetWidth + gap);
+                            cursor += direction * slot;
                             void i;
                         });
                     };
@@ -102,6 +134,13 @@ export default function EnforcementSection() {
                 };
 
                 const onLeave = () => {
+                    // Leaving the section entirely, or arriving on a
+                    // neighbouring card. Either way another card has already
+                    // claimed the spread, and resetting here would pull the
+                    // cards it just moved back on top of each other.
+                    if (activeCard !== card) return;
+                    activeCard = null;
+
                     cards.forEach((c) => {
                         gsap.to(c, {
                             x: 0,
@@ -110,9 +149,8 @@ export default function EnforcementSection() {
                             rotation: REST_ROTATION[c.dataset.cardIndex % REST_ROTATION.length],
                             zIndex: 1,
                             duration: 1.0,
-                            ease: 'elastic.out(1, 0.5)',
+                            ease: 'power3.out',
                             overwrite: true,
-                            delay: 0.08,
                         });
                     });
                 };
